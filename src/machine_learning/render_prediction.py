@@ -9,6 +9,7 @@ It outputs detailed prediction reports with statistics for each strategy.
 from datetime import datetime
 from pathlib import Path
 import argparse
+from collections import Counter
 from typing import List, Optional, Tuple
 
 import polars as pl
@@ -282,6 +283,132 @@ class PredictionSummaryGenerator:
 {"".join(reports)}
 """
 
+    def _generate_future_number_forecast(
+        self,
+        strategies: List[_StrategyEntry],
+        df_pd,
+        product: str,
+        top_k: int = 5,
+        samples_per_strategy: int = 200,
+    ) -> str:
+        """Generate top-k likely numbers for the next draw by ensembling strategy simulations."""
+        if not strategies or df_pd.empty or "date" not in df_pd.columns:
+            return "## 🔭 Next Draw Number Forecast\n\n> Not enough data to generate forecast.\n"
+
+        product_cfg = get_config(product)
+        last_date = df_pd["date"].max()
+        if not hasattr(last_date, "to_pydatetime"):
+            # Normalize to pandas-compatible datetime scalar for strategy comparisons.
+            import pandas as pd
+
+            last_date = pd.to_datetime(last_date)
+        next_draw_date = last_date + product_cfg.interval
+        display_next_draw_date = next_draw_date.date() if hasattr(next_draw_date, "date") else next_draw_date
+
+        overall_counter: Counter[int] = Counter()
+        per_strategy_lines: List[str] = []
+
+        for name, _, model in strategies:
+            strategy_counter: Counter[int] = Counter()
+            for _ in range(samples_per_strategy):
+                predicted = model.predict(next_draw_date)
+                strategy_counter.update(predicted)
+
+            overall_counter.update(strategy_counter)
+            top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
+            per_strategy_lines.append(f"| {name} | {top_numbers} |")
+
+        top_overall = overall_counter.most_common(top_k)
+        total_tickets = len(strategies) * samples_per_strategy
+        overall_rows = []
+        for number, score in top_overall:
+            ticket_presence = score / total_tickets * 100 if total_tickets > 0 else 0
+            overall_rows.append(f"| {number} | {score} | {ticket_presence:.2f}% |")
+
+        return f"""## 🔭 Next Draw Number Forecast
+
+> Forecast for the next draw date: **{display_next_draw_date}**.
+> Method: each strategy simulates **{samples_per_strategy}** tickets, then all tickets are aggregated.
+> This is probabilistic ranking, not guaranteed winning numbers.
+
+### Top {top_k} candidate numbers (ensemble)
+
+| Number | Ensemble Score | Presence per Ticket |
+|--------|----------------|---------------------|
+{chr(10).join(overall_rows)}
+
+### Top {top_k} by strategy
+
+| Strategy | Top numbers |
+|----------|-------------|
+{chr(10).join(per_strategy_lines)}
+"""
+
+    def _generate_compact_strategy_table(
+        self,
+        strategies: List[_StrategyEntry],
+        df_pd,
+        product: str,
+        top_k: int = 5,
+        samples_per_strategy: int = 200,
+    ) -> str:
+        """Generate a concise one-row-per-strategy summary table with next-draw Top-K numbers."""
+        if not strategies or df_pd.empty or "date" not in df_pd.columns:
+            return "## 📋 Compact Strategy Table\n\n> Not enough data to generate compact table.\n"
+
+        product_cfg = get_config(product)
+        last_date = df_pd["date"].max()
+        if not hasattr(last_date, "to_pydatetime"):
+            import pandas as pd
+
+            last_date = pd.to_datetime(last_date)
+        next_draw_date = last_date + product_cfg.interval
+        display_next_draw_date = next_draw_date.date() if hasattr(next_draw_date, "date") else next_draw_date
+
+        rows: List[str] = []
+        for name, tpd, model in strategies:
+            df_eval = model.df_backtest_evaluate
+            if df_eval is None or df_eval.empty:
+                continue
+
+            cost, gain, profit = model.revenue()
+            roi = (profit / cost * 100) if cost > 0 else 0.0
+
+            s_correct = df_eval["correct_num"].apply(self._to_int).astype(int)
+            c5 = int((s_correct >= 5).sum())
+            c4 = int((s_correct == 4).sum())
+            c3 = int((s_correct == 3).sum())
+
+            strategy_counter: Counter[int] = Counter()
+            for _ in range(samples_per_strategy):
+                strategy_counter.update(model.predict(next_draw_date))
+            top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
+
+            config_text = f"range {model.min_val}-{model.max_val}, pick {model.number_predict}, tpd {tpd}"
+            period_text = f"{df_eval['date'].min()} -> {df_eval['date'].max()} ({len(model.df_backtest):,} draws/{len(df_eval):,} preds)"
+            financial_text = f"cost {cost:,}, gain {gain:,}, roi {roi:.2f}%"
+            match_text = f"5+: {c5}, 4: {c4}, 3: {c3}"
+            best_text = f"{c5} rows with >=5 matches"
+
+            rows.append(
+                "| "
+                + " | ".join([name, config_text, period_text, financial_text, match_text, best_text, top_numbers])
+                + " |"
+            )
+
+        if not rows:
+            return "## 📋 Compact Strategy Table\n\n> No strategy rows available.\n"
+
+        return f"""## 📋 Compact Strategy Table
+
+> Forecast target date: **{display_next_draw_date}**.
+> Compact view requested: Configuration, Backtest Period, Financial Summary, Match Distribution, Best Results, Top {top_k}.
+
+| Strategy | Configuration | Backtest Period | Financial Summary | Match Distribution | Best Results | Top {top_k} |
+|----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
+{chr(10).join(rows)}
+"""
+
     # ------------------------------------------------------------------
     # Strategy documentation
     # ------------------------------------------------------------------
@@ -397,8 +524,8 @@ class PredictionSummaryGenerator:
         strategies = self._build_and_run_strategies(df_pd, min_val=product_cfg.min_value, max_val=product_cfg.max_value)
 
         roi_table = self._roi_comparison_table(strategies)
-        strategy_docs = self._strategy_docs_section()
-        predictions = self._generate_predictions_section(strategies)
+        compact_table = self._generate_compact_strategy_table(strategies, df_pd, product=product, top_k=5)
+        future_forecast = self._generate_future_number_forecast(strategies, df_pd, product=product, top_k=5)
 
         return f"""# 🔮 Vietlott {product.replace('_', ' ').title()} Prediction Summary
 
@@ -409,9 +536,9 @@ class PredictionSummaryGenerator:
 
 {roi_table}
 
-{strategy_docs}
+{compact_table}
 
-{predictions}
+{future_forecast}
 
 ---
 
