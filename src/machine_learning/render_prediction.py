@@ -8,6 +8,7 @@ It outputs detailed prediction reports with statistics for each strategy.
 
 from datetime import datetime
 from pathlib import Path
+import argparse
 from typing import List, Optional, Tuple
 
 import polars as pl
@@ -73,7 +74,7 @@ class PredictionSummaryGenerator:
     # Strategy runner
     # ------------------------------------------------------------------
 
-    def _build_and_run_strategies(self, df_pd) -> List[_StrategyEntry]:
+    def _build_and_run_strategies(self, df_pd, *, min_val: int, max_val: int) -> List[_StrategyEntry]:
         """
         Instantiate, backtest, and evaluate all strategies.
 
@@ -83,23 +84,71 @@ class PredictionSummaryGenerator:
         tpd = 20  # tickets per day for all strategies
 
         strategy_defs = [
-            ("Random Strategy", RandomModel(df_pd, tpd)),
-            ("Long Absence Strategy", LongAbsenceStrategy(df_pd, time_predict=tpd, top_n=15)),
-            ("Pattern Strategy", PatternStrategy(df_pd, time_predict=tpd, lookback_days=180, pattern_weight=0.6)),
+            ("Random Strategy", RandomModel(df_pd, tpd, min_val=min_val, max_val=max_val)),
+            (
+                "Long Absence Strategy",
+                LongAbsenceStrategy(df_pd, time_predict=tpd, min_val=min_val, max_val=max_val, top_n=15),
+            ),
+            (
+                "Pattern Strategy",
+                PatternStrategy(
+                    df_pd,
+                    time_predict=tpd,
+                    min_val=min_val,
+                    max_val=max_val,
+                    lookback_days=180,
+                    pattern_weight=0.6,
+                ),
+            ),
             (
                 "Hot Numbers Strategy",
-                HotNumbersStrategy(df_pd, time_predict=tpd, lookback_days=365, selection_weight=0.7),
+                HotNumbersStrategy(
+                    df_pd,
+                    time_predict=tpd,
+                    min_val=min_val,
+                    max_val=max_val,
+                    lookback_days=365,
+                    selection_weight=0.7,
+                ),
             ),
             (
                 "Cold Numbers Strategy",
-                ColdNumbersStrategy(df_pd, time_predict=tpd, lookback_days=365, selection_weight=0.7),
+                ColdNumbersStrategy(
+                    df_pd,
+                    time_predict=tpd,
+                    min_val=min_val,
+                    max_val=max_val,
+                    lookback_days=365,
+                    selection_weight=0.7,
+                ),
             ),
-            ("Not Repeat Strategy", NotRepeatStrategy(df_pd, time_predict=tpd, lookback_days=30, avoid_weight=0.8)),
+            (
+                "Not Repeat Strategy",
+                NotRepeatStrategy(
+                    df_pd,
+                    time_predict=tpd,
+                    min_val=min_val,
+                    max_val=max_val,
+                    lookback_days=30,
+                    avoid_weight=0.8,
+                ),
+            ),
             (
                 "Exponential Decay Strategy",
-                ExponentialDecayStrategy(df_pd, time_predict=tpd, half_life_days=90, hot=True, selection_weight=0.8),
+                ExponentialDecayStrategy(
+                    df_pd,
+                    time_predict=tpd,
+                    min_val=min_val,
+                    max_val=max_val,
+                    half_life_days=90,
+                    hot=True,
+                    selection_weight=0.8,
+                ),
             ),
-            ("Pair Frequency Strategy", PairFrequencyStrategy(df_pd, time_predict=tpd, lookback_days=365)),
+            (
+                "Pair Frequency Strategy",
+                PairFrequencyStrategy(df_pd, time_predict=tpd, min_val=min_val, max_val=max_val, lookback_days=365),
+            ),
         ]
 
         results: List[_StrategyEntry] = []
@@ -335,22 +384,23 @@ class PredictionSummaryGenerator:
     # Summary assembly
     # ------------------------------------------------------------------
 
-    def generate_prediction_summary(self) -> str:
+    def generate_prediction_summary(self, product: str = "power_655") -> str:
         """Generate the complete prediction summary content."""
         logger.info("Starting prediction summary generation...")
 
-        df_power655 = self._load_lottery_data("power_655")
-        if df_power655.is_empty():
+        product_cfg = get_config(product)
+        df_product = self._load_lottery_data(product)
+        if df_product.is_empty():
             return "# Error\n\nNo data available.\n"
 
-        df_pd = df_power655.to_pandas()
-        strategies = self._build_and_run_strategies(df_pd)
+        df_pd = df_product.to_pandas()
+        strategies = self._build_and_run_strategies(df_pd, min_val=product_cfg.min_value, max_val=product_cfg.max_value)
 
         roi_table = self._roi_comparison_table(strategies)
         strategy_docs = self._strategy_docs_section()
         predictions = self._generate_predictions_section(strategies)
 
-        return f"""# 🔮 Vietlott Power 655 Prediction Summary
+        return f"""# 🔮 Vietlott {product.replace('_', ' ').title()} Prediction Summary
 
 > **Generated**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 >
@@ -370,13 +420,14 @@ class PredictionSummaryGenerator:
 This prediction summary is for educational and research purposes only. Lottery outcomes are random and cannot be reliably predicted. Never gamble more than you can afford to lose.
 """
 
-    def save_prediction_summary(self, output_path: Optional[Path] = None) -> None:
+    def save_prediction_summary(self, product: str = "power_655", output_path: Optional[Path] = None) -> None:
         """Generate and save prediction summary to file."""
         if output_path is None:
-            output_path = Path(__file__).parent / "readme.md"
+            output_name = "readme.md" if product == "power_655" else f"readme_{product}.md"
+            output_path = Path(__file__).parent / output_name
 
         try:
-            summary_content = self.generate_prediction_summary()
+            summary_content = self.generate_prediction_summary(product=product)
 
             with output_path.open("w", encoding="utf-8") as ofile:
                 ofile.write(summary_content)
@@ -387,11 +438,21 @@ This prediction summary is for educational and research purposes only. Lottery o
             raise
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for prediction summary generation."""
+    parser = argparse.ArgumentParser(description="Generate prediction summary for a Vietlott product")
+    parser.add_argument("--product", default="power_655", help="Product name, e.g. power_655 or power_645")
+    parser.add_argument("--output", default=None, help="Optional output markdown path")
+    return parser.parse_args()
+
+
 def main():
     """Main entry point for prediction summary generation."""
     try:
+        args = parse_args()
         generator = PredictionSummaryGenerator()
-        generator.save_prediction_summary()
+        output_path = Path(args.output) if args.output else None
+        generator.save_prediction_summary(product=args.product, output_path=output_path)
         logger.info("Prediction summary generation completed successfully!")
     except Exception as e:
         logger.error(f"Failed to generate prediction summary: {e}")
