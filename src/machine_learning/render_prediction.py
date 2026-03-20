@@ -315,6 +315,7 @@ class PredictionSummaryGenerator:
 
         overall_counter: Counter[int] = Counter()
         per_strategy_lines: List[str] = []
+        strategy_roi_list = []
 
         for name, _, model in strategies:
             strategy_counter: Counter[int] = Counter()
@@ -324,6 +325,13 @@ class PredictionSummaryGenerator:
 
             overall_counter.update(strategy_counter)
             top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
+            cost, gain, profit = model.revenue()
+            roi = (profit / cost * 100) if cost > 0 else 0.0
+            strategy_roi_list.append((name, top_numbers, roi))
+        
+        # Sort by ROI in descending order (highest profit first)
+        strategy_roi_list.sort(key=lambda x: x[2], reverse=True)
+        for name, top_numbers, _ in strategy_roi_list:
             per_strategy_lines.append(f"| {name} | {top_numbers} |")
 
         top_overall = overall_counter.most_common(top_k)
@@ -332,6 +340,8 @@ class PredictionSummaryGenerator:
         for number, score in top_overall:
             ticket_presence = score / total_tickets * 100 if total_tickets > 0 else 0
             overall_rows.append(f"| {number} | {score} | {ticket_presence:.2f}% |")
+        
+        # Sort per_strategy_lines is already done above in the loop
 
         return f"""## 🔭 Dự đoán Số cho Lần Quay Tiếp theo
 
@@ -373,7 +383,7 @@ class PredictionSummaryGenerator:
         next_draw_date = last_date + product_cfg.interval
         display_next_draw_date = next_draw_date.date() if hasattr(next_draw_date, "date") else next_draw_date
 
-        rows: List[str] = []
+        rows: List[tuple] = []
         for name, tpd, model in strategies:
             df_eval = model.df_backtest_evaluate
             if df_eval is None or df_eval.empty:
@@ -398,14 +408,19 @@ class PredictionSummaryGenerator:
             match_text = f"5+: {c5}, 4: {c4}, 3: {c3}"
             best_text = f"{c5} hàng với >=5 trùng khớp"
 
-            rows.append(
+            row_text = (
                 "| "
                 + " | ".join([name, config_text, period_text, financial_text, match_text, best_text, top_numbers])
                 + " |"
             )
+            rows.append((roi, row_text))
 
-        if not rows:
-            return "## 📋 Compact Strategy Table\n\n> No strategy rows available.\n"
+        # Sort by ROI in descending order (highest profit first)
+        rows.sort(key=lambda x: x[0], reverse=True)
+        rows_sorted = [row_text for _, row_text in rows]
+
+        if not rows_sorted:
+            return "## 📋 Bảng Chiến lược Tóm tắt\n\n> Không có dữ liệu chiến lược.\n"
 
         return f"""## 📋 Bảng Chiến lược Tóm tắt
 
@@ -414,7 +429,7 @@ class PredictionSummaryGenerator:
 
 | Chiến lược | Cấu hình | Kỳ Kiểm thử | Tóm tắt Tài chính | Phân bố Trùng khớp | Kết quả Tốt nhất | {top_k} Hàng đầu |
 |----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
-{chr(10).join(rows)}
+{chr(10).join(rows_sorted)}
 """
 
     # ------------------------------------------------------------------
