@@ -1,6 +1,6 @@
 # 🔮 Vietlott Power 645 Prediction Summary
 
-> **Generated**: 2026-03-16 15:42:59
+> **Generated**: 2026-03-20 16:50:51
 >
 > This document contains machine learning predictions for Vietnamese lottery data.
 > This is an experimental module for educational purposes only.
@@ -13,61 +13,62 @@
 
 | Rank | Strategy | Total Cost (VND) | Total Gain (VND) | Net Profit (VND) | ROI |
 |------|----------|-----------------|-----------------|-----------------|-----|
-| 🥇 1 | Pattern Strategy | 296,800,000 | 10,061,300,000 | 9,764,500,000 | 3289.93% |
-| 🥈 2 | Cold Numbers Strategy | 296,800,000 | 10,057,150,000 | 9,760,350,000 | 3288.53% |
-| 🥉 3 | Random Strategy | 296,800,000 | 10,056,850,000 | 9,760,050,000 | 3288.43% |
-|    4 | Hot Numbers Strategy | 296,800,000 | 10,055,300,000 | 9,758,500,000 | 3287.90% |
-|    5 | Long Absence Strategy | 296,800,000 | 10,051,550,000 | 9,754,750,000 | 3286.64% |
-|    6 | Exponential Decay Strategy | 296,800,000 | 5,051,150,000 | 4,754,350,000 | 1601.87% |
-|    7 | Not Repeat Strategy | 296,800,000 | 58,900,000 | -237,900,000 | -80.15% |
-|    8 | Pair Frequency Strategy | 296,800,000 | 49,050,000 | -247,750,000 | -83.47% |
+| 🥇 1 | Random Strategy | 297,000,000 | 10,056,750,000 | 9,759,750,000 | 3286.11% |
+| 🥈 2 | Hot Numbers Strategy | 297,000,000 | 10,053,350,000 | 9,756,350,000 | 3284.97% |
+| 🥉 3 | Cold Numbers Strategy | 297,000,000 | 5,056,550,000 | 4,759,550,000 | 1602.54% |
+|    4 | Long Absence Strategy | 297,000,000 | 5,054,900,000 | 4,757,900,000 | 1601.99% |
+|    5 | Pattern Strategy | 297,000,000 | 5,053,250,000 | 4,756,250,000 | 1601.43% |
+|    6 | Pair Frequency Strategy | 297,000,000 | 5,051,600,000 | 4,754,600,000 | 1600.88% |
+|    7 | Exponential Decay Strategy | 297,000,000 | 5,045,900,000 | 4,748,900,000 | 1598.96% |
+|    8 | Not Repeat Strategy | 297,000,000 | 59,900,000 | -237,100,000 | -79.83% |
 
 
 ## 📋 Compact Strategy Table
 
-> Forecast target date: **2026-03-17**.
-> Compact view requested: Configuration, Backtest Period, Financial Summary, Match Distribution, Best Results, Top 5.
+> Forecast target date: **2026-03-20**.
+> Compact view requested: Configuration, Backtest Period, Financial Summary, Match Distribution, Best Results, Top 6.
 
-| Strategy | Configuration | Backtest Period | Financial Summary | Match Distribution | Best Results | Top 5 |
+| Strategy | Configuration | Backtest Period | Financial Summary | Match Distribution | Best Results | Top 6 |
 |----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
-| Random Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 10,056,850,000, roi 3288.43% | 5+: 2, 4: 47, 3: 667 | 2 rows with >=5 matches | 9, 31, 1, 15, 19 |
-| Long Absence Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 10,051,550,000, roi 3286.64% | 5+: 2, 4: 41, 3: 621 | 2 rows with >=5 matches | 38, 41, 29, 24, 27 |
-| Pattern Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 10,061,300,000, roi 3289.93% | 5+: 2, 4: 49, 3: 736 | 2 rows with >=5 matches | 3, 5, 2, 4, 6 |
-| Hot Numbers Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 10,055,300,000, roi 3287.90% | 5+: 2, 4: 44, 3: 666 | 2 rows with >=5 matches | 31, 42, 24, 11, 15 |
-| Cold Numbers Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 10,057,150,000, roi 3288.53% | 5+: 2, 4: 52, 3: 623 | 2 rows with >=5 matches | 40, 10, 3, 11, 33 |
-| Not Repeat Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 58,900,000, roi -80.15% | 5+: 0, 4: 64, 3: 538 | 0 rows with >=5 matches | 30, 3, 14, 5, 41 |
-| Exponential Decay Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 5,051,150,000, roi 1601.87% | 5+: 1, 4: 34, 3: 683 | 1 rows with >=5 matches | 4, 43, 23, 6, 16 |
-| Pair Frequency Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-15 00:00:00 (1,484 draws/29,680 preds) | cost 296,800,000, gain 49,050,000, roi -83.47% | 5+: 0, 4: 30, 3: 681 | 0 rows with >=5 matches | 34, 42, 24, 20, 28 |
+| Random Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 10,056,750,000, roi 3286.11% | 5+: 2, 4: 43, 3: 705 | 2 rows with >=5 matches | 24, 43, 6, 11, 36, 40 |
+| Long Absence Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 5,054,900,000, roi 1601.99% | 5+: 1, 4: 47, 3: 628 | 1 rows with >=5 matches | 5, 27, 40, 15, 24, 41 |
+| Pattern Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 5,053,250,000, roi 1601.43% | 5+: 1, 4: 41, 3: 655 | 1 rows with >=5 matches | 10, 23, 13, 7, 4, 11 |
+| Hot Numbers Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 10,053,350,000, roi 3284.97% | 5+: 2, 4: 41, 3: 657 | 2 rows with >=5 matches | 31, 17, 23, 35, 43, 28 |
+| Cold Numbers Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 5,056,550,000, roi 1602.54% | 5+: 1, 4: 41, 3: 721 | 1 rows with >=5 matches | 33, 41, 27, 40, 39, 10 |
+| Not Repeat Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 59,900,000, roi -79.83% | 5+: 0, 4: 67, 3: 528 | 0 rows with >=5 matches | 43, 30, 3, 39, 41, 5 |
+| Exponential Decay Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 5,045,900,000, roi 1598.96% | 5+: 1, 4: 23, 3: 688 | 1 rows with >=5 matches | 13, 2, 4, 28, 37, 20 |
+| Pair Frequency Strategy | range 1-45, pick 6, tpd 20 | 2016-07-20 00:00:00 -> 2026-03-18 00:00:00 (1,485 draws/29,700 preds) | cost 297,000,000, gain 5,051,600,000, roi 1600.88% | 5+: 1, 4: 36, 3: 672 | 1 rows with >=5 matches | 30, 28, 42, 17, 20, 31 |
 
 
 ## 🔭 Next Draw Number Forecast
 
-> Forecast for the next draw date: **2026-03-17**.
+> Forecast for the next draw date: **2026-03-20**.
 > Method: each strategy simulates **200** tickets, then all tickets are aggregated.
 > This is probabilistic ranking, not guaranteed winning numbers.
 
-### Top 5 candidate numbers (ensemble)
+### Top 6 candidate numbers (ensemble)
 
 | Number | Ensemble Score | Presence per Ticket |
 |--------|----------------|---------------------|
-| 30 | 433 | 27.06% |
-| 5 | 429 | 26.81% |
-| 39 | 416 | 26.00% |
-| 27 | 410 | 25.62% |
-| 3 | 403 | 25.19% |
+| 30 | 431 | 26.94% |
+| 27 | 426 | 26.62% |
+| 5 | 418 | 26.12% |
+| 39 | 405 | 25.31% |
+| 41 | 399 | 24.94% |
+| 3 | 399 | 24.94% |
 
-### Top 5 by strategy
+### Top 6 by strategy
 
 | Strategy | Top numbers |
 |----------|-------------|
-| Random Strategy | 40, 42, 13, 25, 17 |
-| Long Absence Strategy | 5, 29, 27, 38, 30 |
-| Pattern Strategy | 6, 19, 36, 12, 2 |
-| Hot Numbers Strategy | 23, 7, 42, 9, 44 |
-| Cold Numbers Strategy | 33, 39, 25, 10, 15 |
-| Not Repeat Strategy | 14, 39, 3, 30, 41 |
-| Exponential Decay Strategy | 7, 20, 2, 45, 4 |
-| Pair Frequency Strategy | 31, 24, 28, 42, 22 |
+| Random Strategy | 30, 33, 34, 15, 5, 3 |
+| Long Absence Strategy | 27, 15, 29, 38, 8, 17 |
+| Pattern Strategy | 5, 3, 1, 4, 30, 7 |
+| Hot Numbers Strategy | 44, 36, 7, 45, 28, 24 |
+| Cold Numbers Strategy | 40, 3, 19, 27, 21, 33 |
+| Not Repeat Strategy | 43, 41, 27, 30, 39, 3 |
+| Exponential Decay Strategy | 2, 20, 28, 31, 4, 42 |
+| Pair Frequency Strategy | 45, 31, 28, 14, 44, 35 |
 
 
 ---

@@ -75,7 +75,14 @@ class PredictionSummaryGenerator:
     # Strategy runner
     # ------------------------------------------------------------------
 
-    def _build_and_run_strategies(self, df_pd, *, min_val: int, max_val: int) -> List[_StrategyEntry]:
+    def _build_and_run_strategies(
+        self,
+        df_pd,
+        *,
+        min_val: int,
+        max_val: int,
+        number_predict: int,
+    ) -> List[_StrategyEntry]:
         """
         Instantiate, backtest, and evaluate all strategies.
 
@@ -154,6 +161,7 @@ class PredictionSummaryGenerator:
 
         results: List[_StrategyEntry] = []
         for name, model in strategy_defs:
+            model.number_predict = number_predict
             logger.info(f"Running {name}...")
             model.backtest()
             model.evaluate()
@@ -521,11 +529,22 @@ class PredictionSummaryGenerator:
             return "# Error\n\nNo data available.\n"
 
         df_pd = df_product.to_pandas()
-        strategies = self._build_and_run_strategies(df_pd, min_val=product_cfg.min_value, max_val=product_cfg.max_value)
+        number_predict = product_cfg.size_output
+        strategies = self._build_and_run_strategies(
+            df_pd,
+            min_val=product_cfg.min_value,
+            max_val=product_cfg.max_value,
+            number_predict=number_predict,
+        )
 
         roi_table = self._roi_comparison_table(strategies)
-        compact_table = self._generate_compact_strategy_table(strategies, df_pd, product=product, top_k=5)
-        future_forecast = self._generate_future_number_forecast(strategies, df_pd, product=product, top_k=5)
+        compact_table = self._generate_compact_strategy_table(strategies, df_pd, product=product, top_k=number_predict)
+        future_forecast = self._generate_future_number_forecast(
+            strategies,
+            df_pd,
+            product=product,
+            top_k=number_predict,
+        )
 
         return f"""# 🔮 Vietlott {product.replace('_', ' ').title()} Prediction Summary
 
