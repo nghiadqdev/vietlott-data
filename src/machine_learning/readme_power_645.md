@@ -1,6 +1,6 @@
 # 🔮 Tóm tắt Dự đoán Vietlott Power 645
 
-> **Được tạo**: 2026-03-20 22:20:08
+> **Được tạo**: 2026-03-20 22:38:31
 > **Seed**: 42 (deterministic), **Seed runs**: 3
 >
 >
@@ -122,7 +122,7 @@
 | 38 | 747284.5 | 3.00% |
 | 6 | 747241.5 | 3.00% |
 
-### 6 hàng đầu theo Chiến lược
+### 6 hàng đầu theo Chiến lược - Bảng A (xếp theo ROI Toàn kỳ)
 
 | Chiến lược | Số hàng đầu |
 |----------|-------------|
@@ -133,6 +133,21 @@
 | Chiến lược Không Lặp lại | 3, 41, 43, 39, 27, 30 |
 | Chiến lược Mẫu | 13, 35, 14, 7, 18, 4 |
 | Chiến lược Tần suất Cặp | 28, 9, 44, 7, 45, 42 |
+| Chiến lược Ngẫu nhiên | 20, 35, 42, 15, 40, 11 |
+
+### 6 hàng đầu theo Chiến lược - Bảng B (xếp theo ROI Khung nhớ động)
+
+> Xếp hạng theo ROI OOS trong **120 kỳ quay gần nhất**.
+
+| Chiến lược | Số hàng đầu |
+|----------|-------------|
+| Chiến lược Số Lạnh | 15, 11, 10, 40, 6, 33 |
+| Chiến lược Không Lặp lại | 3, 41, 43, 39, 27, 30 |
+| Chiến lược Mẫu | 13, 35, 14, 7, 18, 4 |
+| Chiến lược Số Nóng | 23, 31, 21, 28, 32, 36 |
+| Chiến lược Tần suất Cặp | 28, 9, 44, 7, 45, 42 |
+| Chiến lược Suy giảm Exponential | 44, 1, 31, 6, 7, 43 |
+| Chiến lược Vắng mặt Lâu dài | 5, 27, 41, 30, 38, 39 |
 | Chiến lược Ngẫu nhiên | 20, 35, 42, 15, 40, 11 |
 
 
@@ -172,19 +187,19 @@
 
 ## 🧾 Leaderboard Lịch sử
 
-> Tổng hợp từ **8 bản ghi gần nhất** của sản phẩm `power_645`.
+> Tổng hợp từ **10 bản ghi gần nhất** của sản phẩm `power_645`.
 > Bảng này giúp ưu tiên chiến lược ổn định theo thời gian, không chỉ theo một lần chạy.
 
 | Hạng | Chiến lược | ROI TB lịch sử | ROI Độ lệch chuẩn | Số run |
 |------|------------|----------------|-------------------|--------|
-| 1 | Chiến lược Ngẫu nhiên | 2723.51% | 2100.09% | 24 |
-| 2 | Chiến lược Suy giảm Exponential | 1602.26% | 1374.83% | 24 |
-| 3 | Chiến lược Mẫu | 1602.25% | 1373.87% | 24 |
-| 4 | Chiến lược Số Lạnh | 1601.96% | 1374.02% | 24 |
-| 5 | Chiến lược Số Nóng | 1039.91% | 793.46% | 24 |
-| 6 | Chiến lược Vắng mặt Lâu dài | 1039.26% | 793.53% | 24 |
-| 7 | Chiến lược Tần suất Cặp | 479.61% | 793.16% | 24 |
-| 8 | Chiến lược Không Lặp lại | -79.57% | 0.55% | 24 |
+| 1 | Chiến lược Ngẫu nhiên | 2723.51% | 2100.09% | 30 |
+| 2 | Chiến lược Suy giảm Exponential | 1602.26% | 1374.83% | 30 |
+| 3 | Chiến lược Mẫu | 1602.25% | 1373.87% | 30 |
+| 4 | Chiến lược Số Lạnh | 1601.96% | 1374.02% | 30 |
+| 5 | Chiến lược Số Nóng | 1039.91% | 793.46% | 30 |
+| 6 | Chiến lược Vắng mặt Lâu dài | 1039.26% | 793.53% | 30 |
+| 7 | Chiến lược Tần suất Cặp | 479.61% | 793.16% | 30 |
+| 8 | Chiến lược Không Lặp lại | -79.57% | 0.55% | 30 |
 
 
 ---
