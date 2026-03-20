@@ -55,6 +55,14 @@ class PredictionSummaryGenerator:
             # Numpy is optional for deterministic behavior in strategies using stdlib random.
             pass
 
+    def _fmt_money_tr(self, value: float) -> str:
+        """Format VND as million unit with 'tr' suffix (e.g. 297tr, 10,058.5tr)."""
+        million = value / 1_000_000
+        text = f"{million:,.1f}"
+        if text.endswith(".0"):
+            text = text[:-2]
+        return f"{text}tr"
+
     def _collect_strategy_metrics(self, strategies: List[_StrategyEntry]) -> List[Dict[str, float]]:
         """Collect per-strategy metrics used for stability analysis and history logging."""
         metrics: List[Dict[str, float]] = []
@@ -96,12 +104,12 @@ class PredictionSummaryGenerator:
 
         rows.sort(key=lambda x: x[1], reverse=True)
         lines = [
-            "| Chiến lược | ROI TB | ROI Độ lệch chuẩn | Lợi nhuận TB (VND) | Lợi nhuận Độ lệch chuẩn |",
+            "| Chiến lược | ROI TB | ROI Độ lệch chuẩn | Lợi nhuận TB (tr) | Lợi nhuận Độ lệch chuẩn (tr) |",
             "|------------|--------|-------------------|--------------------|--------------------------|",
         ]
         for name, roi_avg, roi_std, profit_avg, profit_std in rows:
             lines.append(
-                f"| {name} | {roi_avg:.2f}% | {roi_std:.2f}% | {profit_avg:,.0f} | {profit_std:,.0f} |"
+                f"| {name} | {roi_avg:.2f}% | {roi_std:.2f}% | {self._fmt_money_tr(profit_avg)} | {self._fmt_money_tr(profit_std)} |"
             )
 
         return f"""## 📈 Độ ổn định Nhiều Seed
@@ -342,11 +350,13 @@ class PredictionSummaryGenerator:
         rows.sort(key=lambda x: x[4], reverse=True)
 
         medals = ["🥇", "🥈", "🥉"] + ["  "] * len(rows)
-        header = "| Hạng | Chiến lược | Tổng Chi phí (VND) | Tổng Lợi nhuận (VND) | Lợi nhuận ròng (VND) | ROI |"
+        header = "| Hạng | Chiến lược | Tổng Chi phí (tr) | Tổng Lợi nhuận (tr) | Lợi nhuận ròng (tr) | ROI |"
         sep = "|------|----------|-----------------|-----------------|-----------------|-----|"
         lines = [header, sep]
         for i, (name, cost, gain, profit, roi) in enumerate(rows):
-            lines.append(f"| {medals[i]} {i + 1} | {name} | {cost:,} | {gain:,} | {profit:,} | {roi:.2f}% |")
+            lines.append(
+                f"| {medals[i]} {i + 1} | {name} | {self._fmt_money_tr(cost)} | {self._fmt_money_tr(gain)} | {self._fmt_money_tr(profit)} | {roi:.2f}% |"
+            )
 
         return f"""## 📊 So sánh Hiệu suất Chiến lược
 
@@ -355,6 +365,137 @@ class PredictionSummaryGenerator:
 > So sánh cho thấy *chiến lược nào thua ít nhất*, không phải chiến lược nào có lợi.
 
 {chr(10).join(lines)}
+"""
+
+    def _generate_roi_bar_chart(self, strategies: List[_StrategyEntry], width: int = 24) -> str:
+        """Generate a compact ASCII bar chart to visualize relative ROI by strategy."""
+        if not strategies:
+            return ""
+
+        rows = []
+        for name, _, model in strategies:
+            cost, gain, profit = model.revenue()
+            roi = (profit / cost * 100) if cost > 0 else 0.0
+            rows.append((name, roi))
+
+        rows.sort(key=lambda x: x[1], reverse=True)
+        max_abs = max(abs(roi) for _, roi in rows) or 1.0
+
+        lines = [
+            "| Chiến lược | ROI | Biểu đồ tương đối |",
+            "|------------|-----|-------------------|",
+        ]
+        for name, roi in rows:
+            bar_len = int(abs(roi) / max_abs * width)
+            if bar_len == 0 and roi != 0:
+                bar_len = 1
+            symbol = "+" if roi >= 0 else "-"
+            bar = symbol * bar_len
+            lines.append(f"| {name} | {roi:.2f}% | {bar} |")
+
+        return f"""## 📉 Biểu đồ ROI Tổng quát
+
+> Biểu đồ thanh tương đối để nhìn nhanh chiến lược nào đang trội/yếu trong lần chạy hiện tại.
+> Dấu '+' là ROI dương, dấu '-' là ROI âm. Độ dài thanh được chuẩn hóa theo giá trị tuyệt đối lớn nhất.
+
+{chr(10).join(lines)}
+"""
+
+    def _generate_roi_dual_tables(
+        self,
+        strategies: List[_StrategyEntry],
+        df_pd,
+        *,
+        oos_days: int,
+        oos_draws: Optional[int],
+    ) -> str:
+        """Generate two ROI tables to compare fixed benchmark vs recent OOS window."""
+        if not strategies or df_pd.empty or "date" not in df_pd.columns:
+            return ""
+
+        import pandas as pd
+
+        # Table A: fixed benchmark over full backtest history.
+        full_rows = []
+        full_roi_map: Dict[str, float] = {}
+        for name, _, model in strategies:
+            cost, gain, profit = model.revenue()
+            roi = (profit / cost * 100) if cost > 0 else 0.0
+            full_rows.append((name, cost, gain, profit, roi))
+            full_roi_map[name] = roi
+
+        full_rows.sort(key=lambda x: x[4], reverse=True)
+        full_lines = [
+            "| Hạng | Chiến lược | Tổng Chi phí (tr) | Tổng Lợi nhuận (tr) | Lợi nhuận ròng (tr) | ROI Toàn kỳ |",
+            "|------|------------|-------------------|---------------------|---------------------|-------------|",
+        ]
+        medals = ["🥇", "🥈", "🥉"] + ["  "] * len(full_rows)
+        for idx, (name, cost, gain, profit, roi) in enumerate(full_rows, start=1):
+            full_lines.append(
+                f"| {medals[idx - 1]} {idx} | {name} | {self._fmt_money_tr(cost)} | {self._fmt_money_tr(gain)} | {self._fmt_money_tr(profit)} | {roi:.2f}% |"
+            )
+
+        # Table B: dynamic recent-window OOS ROI with delta vs full-history benchmark.
+        last_date = pd.to_datetime(df_pd["date"]).max()
+        date_series = pd.to_datetime(df_pd["date"])
+        if oos_draws is not None and oos_draws > 0:
+            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
+            if unique_dates_desc:
+                cutoff = unique_dates_desc[min(oos_draws - 1, len(unique_dates_desc) - 1)]
+                oos_mode_text = f"**{oos_draws} kỳ quay gần nhất**"
+            else:
+                cutoff = last_date
+                oos_mode_text = "**không xác định**"
+        else:
+            days = oos_days if oos_days >= 1 else 365
+            cutoff = last_date - pd.Timedelta(days=days)
+            oos_mode_text = f"**{days} ngày gần nhất**"
+
+        oos_rows = []
+        for name, _, model in strategies:
+            df_eval = model.df_backtest_evaluate
+            if df_eval is None or df_eval.empty:
+                continue
+
+            eval_dates = pd.to_datetime(df_eval["date"])
+            oos_eval = df_eval.loc[eval_dates >= cutoff].copy()
+            if oos_eval.empty:
+                continue
+
+            correct_num = oos_eval["correct_num"].apply(self._to_int).astype(int)
+            cost = len(oos_eval) * model.ticket_price
+            gain = correct_num.map(model.prices).fillna(0).astype(int).sum()
+            profit = gain - cost
+            roi_oos = (profit / cost * 100) if cost > 0 else 0.0
+            roi_full = full_roi_map.get(name, 0.0)
+            delta = roi_oos - roi_full
+            oos_rows.append((name, cost, gain, profit, roi_oos, delta))
+
+        oos_rows.sort(key=lambda x: x[4], reverse=True)
+        oos_lines = [
+            "| Hạng | Chiến lược | Chi phí OOS (tr) | Lợi nhuận OOS (tr) | ROI OOS | ΔROI (OOS - Toàn kỳ) |",
+            "|------|------------|------------------|--------------------|---------|-----------------------|",
+        ]
+        medals_oos = ["🥇", "🥈", "🥉"] + ["  "] * len(oos_rows)
+        for idx, (name, cost, gain, _profit, roi_oos, delta) in enumerate(oos_rows, start=1):
+            sign = "+" if delta >= 0 else ""
+            oos_lines.append(
+                f"| {medals_oos[idx - 1]} {idx} | {name} | {self._fmt_money_tr(cost)} | {self._fmt_money_tr(gain)} | {roi_oos:.2f}% | {sign}{delta:.2f}% |"
+            )
+
+        return f"""## 📊 So sánh ROI: Benchmark vs Khung nhớ động
+
+> Bảng A là benchmark cố định trên toàn bộ lịch sử.
+> Bảng B là ROI ở cửa sổ gần đây {oos_mode_text} để mô phỏng vận hành động.
+> Cột **ΔROI** giúp bạn thấy mức thay đổi khi chuyển từ khung nhớ cố định sang khung nhớ gần.
+
+### Bảng A: ROI Benchmark (Toàn kỳ)
+
+{chr(10).join(full_lines)}
+
+### Bảng B: ROI Khung nhớ động (OOS gần đây)
+
+{chr(10).join(oos_lines)}
 """
 
     # ------------------------------------------------------------------
@@ -426,15 +567,15 @@ class PredictionSummaryGenerator:
 #### Tóm tắt Tài chính
 | Chỉ số | Giá trị |
 |--------|-------|
-| Tổng chi phí | {cost:,} VND |
-| Tổng lợi nhuận | {gain:,} VND |
-| Lợi nhuận/lỗ ròng | {profit:,} VND |
+| Tổng chi phí | {self._fmt_money_tr(cost)} |
+| Tổng lợi nhuận | {self._fmt_money_tr(gain)} |
+| Lợi nhuận/lỗ ròng | {self._fmt_money_tr(profit)} |
 | ROI | {(profit / cost * 100) if cost > 0 else 0:.2f}% |
 
 #### Phân bố Trùng khớp
 {match_distribution}
 
-#### Kết quả Tốt nhất (5+ trùng khớp)
+#### Kết quả nổi bật (>=5 số trùng)
 {best_results_table}
 
 """
@@ -562,9 +703,9 @@ class PredictionSummaryGenerator:
 
             config_text = f"dải {model.min_val}-{model.max_val}, chọn {model.number_predict}, vé/ngày {tpd}"
             period_text = f"{df_eval['date'].min()} → {df_eval['date'].max()} ({len(model.df_backtest):,} lần quay/{len(df_eval):,} dự đoán)"
-            financial_text = f"chi {cost:,}, lợi {gain:,}, roi {roi:.2f}%"
+            financial_text = f"chi {self._fmt_money_tr(cost)}, lợi {self._fmt_money_tr(gain)}, roi {roi:.2f}%"
             match_text = f"5+: {c5}, 4: {c4}, 3: {c3}"
-            best_text = f"{c5} hàng với >=5 trùng khớp"
+            best_text = f"{c5} hàng với >=5 số trùng"
 
             row_text = (
                 "| "
@@ -583,9 +724,9 @@ class PredictionSummaryGenerator:
         return f"""## 📋 Bảng Chiến lược Tóm tắt
 
 > Ngày dự đoán: **{display_next_draw_date}**.
-> Dạng tóm tắt: Cấu hình, Kỳ Kiểm thử, Tóm tắt Tài chính, Phân bố Trùng khớp, Kết quả Tốt nhất, {top_k} Hàng đầu.
+> Dạng tóm tắt: Cấu hình, Kỳ Kiểm thử, Tóm tắt Tài chính, Phân bố Trùng khớp, KQ nổi bật (>=5 số trùng), {top_k} Hàng đầu.
 
-| Chiến lược | Cấu hình | Kỳ Kiểm thử | Tóm tắt Tài chính | Phân bố Trùng khớp | Kết quả Tốt nhất | {top_k} Hàng đầu |
+| Chiến lược | Cấu hình | Kỳ Kiểm thử | Tóm tắt Tài chính | Phân bố Trùng khớp | KQ nổi bật (>=5) | {top_k} Hàng đầu |
 |----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
 {chr(10).join(rows_sorted)}
 """
@@ -644,7 +785,7 @@ class PredictionSummaryGenerator:
             c3 = int((correct_num == 3).sum())
 
             period_text = f"{oos_eval['date'].min()} → {oos_eval['date'].max()} ({len(oos_eval):,} dự đoán)"
-            financial_text = f"chi {cost:,}, lợi {gain:,}, roi {roi:.2f}%"
+            financial_text = f"chi {self._fmt_money_tr(cost)}, lợi {self._fmt_money_tr(gain)}, roi {roi:.2f}%"
             match_text = f"6+: {c6}, 5: {c5}, 4: {c4}, 3: {c3}"
 
             row_text = "| " + " | ".join([name, period_text, financial_text, match_text]) + " |"
@@ -812,6 +953,13 @@ class PredictionSummaryGenerator:
         assert strategies is not None
 
         roi_table = self._roi_comparison_table(strategies)
+        roi_dual_tables = self._generate_roi_dual_tables(
+            strategies,
+            df_pd,
+            oos_days=oos_days,
+            oos_draws=oos_draws,
+        )
+        roi_chart = self._generate_roi_bar_chart(strategies)
         compact_table = self._generate_compact_strategy_table(strategies, df_pd, product=product, top_k=number_predict)
         future_forecast = self._generate_future_number_forecast(
             strategies,
@@ -842,6 +990,10 @@ class PredictionSummaryGenerator:
 > Đây là một mô-đun thử nghiệm chỉ dành cho mục đích giáo dục.
 
 {roi_table}
+
+{roi_dual_tables}
+
+{roi_chart}
 
 {compact_table}
 
