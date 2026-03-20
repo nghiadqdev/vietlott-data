@@ -92,13 +92,13 @@ class PredictionSummaryGenerator:
         tpd = 20  # tickets per day for all strategies
 
         strategy_defs = [
-            ("Random Strategy", RandomModel(df_pd, tpd, min_val=min_val, max_val=max_val)),
+            ("Chiến lược Ngẫu nhiên", RandomModel(df_pd, tpd, min_val=min_val, max_val=max_val)),
             (
-                "Long Absence Strategy",
+                "Chiến lược Vắng mặt Lâu dài",
                 LongAbsenceStrategy(df_pd, time_predict=tpd, min_val=min_val, max_val=max_val, top_n=15),
             ),
             (
-                "Pattern Strategy",
+                "Chiến lược Mẫu",
                 PatternStrategy(
                     df_pd,
                     time_predict=tpd,
@@ -109,7 +109,7 @@ class PredictionSummaryGenerator:
                 ),
             ),
             (
-                "Hot Numbers Strategy",
+                "Chiến lược Số Nóng",
                 HotNumbersStrategy(
                     df_pd,
                     time_predict=tpd,
@@ -120,7 +120,7 @@ class PredictionSummaryGenerator:
                 ),
             ),
             (
-                "Cold Numbers Strategy",
+                "Chiến lược Số Lạnh",
                 ColdNumbersStrategy(
                     df_pd,
                     time_predict=tpd,
@@ -131,7 +131,7 @@ class PredictionSummaryGenerator:
                 ),
             ),
             (
-                "Not Repeat Strategy",
+                "Chiến lược Không Lặp lại",
                 NotRepeatStrategy(
                     df_pd,
                     time_predict=tpd,
@@ -142,7 +142,7 @@ class PredictionSummaryGenerator:
                 ),
             ),
             (
-                "Exponential Decay Strategy",
+                "Chiến lược Suy giảm Exponential",
                 ExponentialDecayStrategy(
                     df_pd,
                     time_predict=tpd,
@@ -154,7 +154,7 @@ class PredictionSummaryGenerator:
                 ),
             ),
             (
-                "Pair Frequency Strategy",
+                "Chiến lược Tần suất Cặp",
                 PairFrequencyStrategy(df_pd, time_predict=tpd, min_val=min_val, max_val=max_val, lookback_days=365),
             ),
         ]
@@ -184,17 +184,17 @@ class PredictionSummaryGenerator:
         rows.sort(key=lambda x: x[4], reverse=True)
 
         medals = ["🥇", "🥈", "🥉"] + ["  "] * len(rows)
-        header = "| Rank | Strategy | Total Cost (VND) | Total Gain (VND) | Net Profit (VND) | ROI |"
+        header = "| Hạng | Chiến lược | Tổng Chi phí (VND) | Tổng Lợi nhuận (VND) | Lợi nhuận ròng (VND) | ROI |"
         sep = "|------|----------|-----------------|-----------------|-----------------|-----|"
         lines = [header, sep]
         for i, (name, cost, gain, profit, roi) in enumerate(rows):
             lines.append(f"| {medals[i]} {i + 1} | {name} | {cost:,} | {gain:,} | {profit:,} | {roi:.2f}% |")
 
-        return f"""## 📊 Strategy Performance Comparison
+        return f"""## 📊 So sánh Hiệu suất Chiến lược
 
-> Sorted by ROI (best → worst).  All strategies backtested with **{strategies[0][1]} tickets/draw**.
-> Note: All ROIs are deeply negative — lottery odds make profit impossible at scale.
-> The comparison shows *which strategy loses the least*, not which one is profitable.
+> Sắp xếp theo ROI (tốt nhất → tệ nhất). Tất cả các chiến lược được kiểm thử với **{strategies[0][1]} vé/lần quay**.
+> Lưu ý: Tất cả ROI đều âm sâu — xác suất xổ số khiến lợi nhuận không thể xảy ra ở quy mô lớn.
+> So sánh cho thấy *chiến lược nào thua ít nhất*, không phải chiến lược nào có lợi.
 
 {chr(10).join(lines)}
 """
@@ -217,7 +217,7 @@ class PredictionSummaryGenerator:
         """Generate detailed report for a single strategy."""
         df_eval = model.df_backtest_evaluate
         if df_eval is None or df_eval.empty:
-            return f"### {strategy_name}\n\n> No evaluation data available.\n"
+            return f"### {strategy_name}\n\n> Không có dữ liệu đánh giá.\n"
 
         total_draws = len(model.df_backtest)
         total_predictions = len(df_eval)
@@ -226,7 +226,7 @@ class PredictionSummaryGenerator:
         s_correct = df_eval["correct_num"].apply(self._to_int).astype(int)
         match_counts = s_correct.value_counts().sort_index(ascending=False)
         match_distribution = "\n".join(
-            [f"  - **{matches} matches**: {count:,} times" for matches, count in match_counts.items()]
+            [f"  - **{matches} trùng khớp**: {count:,} lần" for matches, count in match_counts.items()]
         )
 
         mask = (s_correct >= 5).to_numpy()
@@ -240,7 +240,7 @@ class PredictionSummaryGenerator:
         df_best["correct_num"] = df_best["correct_num"].apply(self._to_int)
 
         best_results_table = (
-            df_best.to_markdown(index=False) if not df_best.empty else "No results with 5+ matches found."
+            df_best.to_markdown(index=False) if not df_best.empty else "Không tìm thấy kết quả với 5+ trùng khớp."
         )
 
         date_min = df_eval["date"].min()
@@ -248,35 +248,35 @@ class PredictionSummaryGenerator:
 
         return f"""### 🎲 {strategy_name}
 
-#### Configuration
-| Parameter | Value |
+#### Cấu hình
+| Tham số | Giá trị |
 |-----------|-------|
-| Strategy | {strategy_name} |
-| Tickets per day | {tickets_per_day} |
-| Ticket price | {model.ticket_price:,} VND |
-| Number range | {model.min_val} - {model.max_val} |
-| Numbers to pick | {model.number_predict} |
+| Chiến lược | {strategy_name} |
+| Vé mỗi ngày | {tickets_per_day} |
+| Giá vé | {model.ticket_price:,} VND |
+| Dải số | {model.min_val} - {model.max_val} |
+| Số cần chọn | {model.number_predict} |
 
-#### Backtest Period
-| Metric | Value |
+#### Kỳ Kiểm thử
+| Chỉ số | Giá trị |
 |--------|-------|
-| Start date | {date_min} |
-| End date | {date_max} |
-| Total draws | {total_draws:,} |
-| Total predictions | {total_predictions:,} |
+| Ngày bắt đầu | {date_min} |
+| Ngày kết thúc | {date_max} |
+| Tổng lần quay | {total_draws:,} |
+| Tổng dự đoán | {total_predictions:,} |
 
-#### Financial Summary
-| Metric | Value |
+#### Tóm tắt Tài chính
+| Chỉ số | Giá trị |
 |--------|-------|
-| Total cost | {cost:,} VND |
-| Total gain | {gain:,} VND |
-| Net profit/loss | {profit:,} VND |
+| Tổng chi phí | {cost:,} VND |
+| Tổng lợi nhuận | {gain:,} VND |
+| Lợi nhuận/lỗ ròng | {profit:,} VND |
 | ROI | {(profit / cost * 100) if cost > 0 else 0:.2f}% |
 
-#### Match Distribution
+#### Phân bố Trùng khớp
 {match_distribution}
 
-#### Best Results (5+ matches)
+#### Kết quả Tốt nhất (5+ trùng khớp)
 {best_results_table}
 
 """
@@ -284,9 +284,9 @@ class PredictionSummaryGenerator:
     def _generate_predictions_section(self, strategies: List[_StrategyEntry]) -> str:
         """Generate per-strategy detailed reports from pre-run strategy list."""
         reports = [self._generate_strategy_report(model, name, tpd) for name, tpd, model in strategies]
-        return f"""## 🔮 Prediction Models
+        return f"""## 🔮 Mô hình Dự đoán
 
-> ⚠️ **Disclaimer**: These are experimental models for educational purposes only. Lottery outcomes are random and cannot be predicted reliably.
+> ⚠️ **Tuyên bố**: Đây là các mô hình thử nghiệm chỉ dành cho mục đích giáo dục. Kết quả xổ số ngẫu nhiên và không thể dự đoán một cách đáng tin cậy.
 
 {"".join(reports)}
 """
@@ -333,21 +333,21 @@ class PredictionSummaryGenerator:
             ticket_presence = score / total_tickets * 100 if total_tickets > 0 else 0
             overall_rows.append(f"| {number} | {score} | {ticket_presence:.2f}% |")
 
-        return f"""## 🔭 Next Draw Number Forecast
+        return f"""## 🔭 Dự đoán Số cho Lần Quay Tiếp theo
 
-> Forecast for the next draw date: **{display_next_draw_date}**.
-> Method: each strategy simulates **{samples_per_strategy}** tickets, then all tickets are aggregated.
-> This is probabilistic ranking, not guaranteed winning numbers.
+> Dự đoán cho lần quay tiếp theo vào: **{display_next_draw_date}**.
+> Phương pháp: mỗi chiến lược mô phỏng **{samples_per_strategy}** vé, sau đó tất cả vé được tổng hợp.
+> Đây là xếp hạng xác suất, không phải các số trúng đảm bảo.
 
-### Top {top_k} candidate numbers (ensemble)
+### {top_k} số ứng cử viên hàng đầu (tập hợp)
 
-| Number | Ensemble Score | Presence per Ticket |
+| Số | Điểm Tập hợp | Xuất hiện trong Vé |
 |--------|----------------|---------------------|
 {chr(10).join(overall_rows)}
 
-### Top {top_k} by strategy
+### {top_k} hàng đầu theo Chiến lược
 
-| Strategy | Top numbers |
+| Chiến lược | Số hàng đầu |
 |----------|-------------|
 {chr(10).join(per_strategy_lines)}
 """
@@ -392,11 +392,11 @@ class PredictionSummaryGenerator:
                 strategy_counter.update(model.predict(next_draw_date))
             top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
 
-            config_text = f"range {model.min_val}-{model.max_val}, pick {model.number_predict}, tpd {tpd}"
-            period_text = f"{df_eval['date'].min()} -> {df_eval['date'].max()} ({len(model.df_backtest):,} draws/{len(df_eval):,} preds)"
-            financial_text = f"cost {cost:,}, gain {gain:,}, roi {roi:.2f}%"
+            config_text = f"dải {model.min_val}-{model.max_val}, chọn {model.number_predict}, vé/ngày {tpd}"
+            period_text = f"{df_eval['date'].min()} → {df_eval['date'].max()} ({len(model.df_backtest):,} lần quay/{len(df_eval):,} dự đoán)"
+            financial_text = f"chi {cost:,}, lợi {gain:,}, roi {roi:.2f}%"
             match_text = f"5+: {c5}, 4: {c4}, 3: {c3}"
-            best_text = f"{c5} rows with >=5 matches"
+            best_text = f"{c5} hàng với >=5 trùng khớp"
 
             rows.append(
                 "| "
@@ -407,12 +407,12 @@ class PredictionSummaryGenerator:
         if not rows:
             return "## 📋 Compact Strategy Table\n\n> No strategy rows available.\n"
 
-        return f"""## 📋 Compact Strategy Table
+        return f"""## 📋 Bảng Chiến lược Tóm tắt
 
-> Forecast target date: **{display_next_draw_date}**.
-> Compact view requested: Configuration, Backtest Period, Financial Summary, Match Distribution, Best Results, Top {top_k}.
+> Ngày dự đoán: **{display_next_draw_date}**.
+> Dạng tóm tắt: Cấu hình, Kỳ Kiểm thử, Tóm tắt Tài chính, Phân bố Trùng khớp, Kết quả Tốt nhất, {top_k} Hàng đầu.
 
-| Strategy | Configuration | Backtest Period | Financial Summary | Match Distribution | Best Results | Top {top_k} |
+| Chiến lược | Cấu hình | Kỳ Kiểm thử | Tóm tắt Tài chính | Phân bố Trùng khớp | Kết quả Tốt nhất | {top_k} Hàng đầu |
 |----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
 {chr(10).join(rows)}
 """
@@ -422,56 +422,55 @@ class PredictionSummaryGenerator:
     # ------------------------------------------------------------------
 
     _STRATEGY_DOCS = {
-        "Random Strategy": (
-            "**How it works**: Generates tickets by shuffling all numbers in the valid range "
-            "and picking the first `number_predict` entries.  Every number has an equal chance "
-            "of being selected; no historical data is used.\n\n"
-            "**Use case**: Serves as an unbiased performance baseline.  Any strategy that "
-            "cannot beat random selection over a large backtest offers no predictive value."
+        "Chiến lược Ngẫu nhiên": (
+            "**Cách hoạt động**: Tạo vé bằng cách xáo trộn tất cả các số trong dải hợp lệ "
+            "và chọn `number_predict` mục đầu tiên. Mỗi số có cơ hội được chọn bằng nhau; "
+            "không sử dụng dữ liệu lịch sử.\n\n"
+            "**Trường hợp sử dụng**: Phục vụ như một đường cơ sở hiệu suất không thiên vị. "
+            "Bất kỳ chiến lược nào không thể vượt qua lựa chọn ngẫu nhiên trong kiểm thử lớn đều không có giá trị dự đoán."
         ),
-        "Long Absence Strategy": (
-            "**How it works**: For each draw date, looks back at all past draws and records "
-            "the last date each number appeared.  Numbers are ranked by how many days have "
-            "elapsed since they last appeared (numbers that have *never* appeared rank highest). "
-            "A configurable pool of the `top_n` most-absent numbers is assembled, and "
-            "`number_predict` numbers are randomly sampled from that pool.\n\n"
-            "**Key parameter**: `top_n` (default 10) – larger pool → more randomness; "
-            "smaller pool → stronger bias toward the longest-absent numbers.\n\n"
-            "**Use case**: Captures the intuition that numbers that have been *overdue* for "
-            "a long time are somehow more likely to appear.  (Note: for a fair lottery this "
-            "intuition is mathematically incorrect, but the strategy is included for "
-            "empirical comparison.)"
+        "Chiến lược Vắng mặt Lâu dài": (
+            "**Cách hoạt động**: Đối với mỗi lần quay, nhìn lại tất cả các lần quay trước đó và ghi lại "
+            "lần cuối cùng mỗi số xuất hiện. Các số được xếp hạng theo bao nhiêu ngày đã trôi qua "
+            "kể từ khi chúng cuối cùng xuất hiện (các số chưa bao giờ xuất hiện được xếp hạng cao nhất). "
+            "Một nhóm các `top_n` số vắng mặt lâu nhất có thể cấu hình được tập hợp, và "
+            "`number_predict` số được lấy mẫu ngẫu nhiên từ nhóm đó.\n\n"
+            "**Tham số chính**: `top_n` (mặc định 10) – nhóm lớn hơn → tính ngẫu nhiên nhiều hơn; "
+            "nhóm nhỏ hơn → thiên vị mạnh hơn về các số vắng mặt lâu nhất.\n\n"
+            "**Trường hợp sử dụng**: Nắm bắt trực giác rằng các số bị *trễ hạn* "
+            "trong một thời gian dài có nhiều khả năng xuất hiện hơn. (Lưu ý: đối với xổ số công bằng, trực giác này là sai về mặt toán học, "
+            "nhưng chiến lược được đưa vào để so sánh thực nghiệm.)"
         ),
-        "Pattern Strategy": (
-            "**How it works**: Analyses two structural properties of historical draws in "
-            "a rolling `lookback_days` window:\n\n"
-            "1. **Spacing patterns** – gaps between consecutive sorted numbers in a ticket.  "
-            "The most common gaps are used to generate the next number by applying a sampled "
-            "gap to the previously chosen number.\n"
-            "2. **Range distribution** – the number range 1–55 is split into five equal "
-            "sub-ranges.  The historical fraction of draws falling in each sub-range is used "
-            "as a probability weight for choosing the first number.\n\n"
-            "A `pattern_weight` fraction of the ticket is filled with pattern-derived numbers; "
-            "the remainder is filled randomly.\n\n"
-            "**Key parameters**: `lookback_days` (default 180), `pattern_weight` (default 0.6)."
+        "Chiến lược Mẫu": (
+            "**Cách hoạt động**: Phân tích hai thuộc tính cấu trúc của các lần quay lịch sử "
+            "trong cửa sổ `lookback_days` lăn:\n\n"
+            "1. **Mẫu khoảng cách** – khoảng cách giữa các số được sắp xếp liên tiếp trong vé. "
+            "Các khoảng cách phổ biến nhất được sử dụng để tạo số tiếp theo bằng cách áp dụng "
+            "một khoảng cách được lấy mẫu cho số đã chọn trước đó.\n"
+            "2. **Phân bố dải** – dải số 1–55 được chia thành năm dải con bằng nhau. "
+            "Phần lịch sử của các lần quay rơi vào mỗi dải con được sử dụng "
+            "như một trọng số xác suất để chọn số đầu tiên.\n\n"
+            "Một phần `pattern_weight` của vé được điền bằng các số xuất phát từ mẫu; "
+            "phần còn lại được điền ngẫu nhiên.\n\n"
+            "**Tham số chính**: `lookback_days` (mặc định 180), `pattern_weight` (mặc định 0.6)."
         ),
-        "Hot Numbers Strategy": (
-            "**How it works**: Counts how many times each number appeared over the last "
-            "`lookback_days` days.  Numbers are sorted from most-frequent to least-frequent.  "
-            "A weighted pool is built where each number is repeated proportionally to its "
-            "frequency, then numbers are drawn without replacement from that pool.\n\n"
-            "A `selection_weight` fraction of the ticket is filled from the frequency-weighted "
-            "pool; the rest is filled uniformly at random.\n\n"
-            "**Key parameters**: `lookback_days` (default 365), `selection_weight` (default 0.7).\n\n"
-            "**Use case**: Tests whether recently hot numbers continue to appear at above-average rates."
+        "Chiến lược Số Nóng": (
+            "**Cách hoạt động**: Đếm số lần mỗi số xuất hiện trong `lookback_days` ngày qua. "
+            "Các số được sắp xếp từ thường xuyên nhất đến ít thường xuyên nhất. "
+            "Một nhóm được trọng số hóa được xây dựng với mỗi số được lặp lại tỷ lệ với "
+            "tần số của nó, sau đó các số được rút ra mà không thay thế từ nhóm đó.\n\n"
+            "Một phần `selection_weight` của vé được điền từ "
+            "nhóm được trọng số hóa theo tần số; phần còn lại được điền bằng cách ngẫu nhiên.\n\n"
+            "**Tham số chính**: `lookback_days` (mặc định 365), `selection_weight` (mặc định 0.7).\n\n"
+            "**Trường hợp sử dụng**: Kiểm tra xem các số nóng gần đây có tiếp tục xuất hiện ở tỷ lệ trên mức trung bình hay không."
         ),
-        "Cold Numbers Strategy": (
-            "**How it works**: Identical to Hot Numbers Strategy but ranks numbers in the "
-            "*reverse* order (least frequent first).  The weighted pool gives higher weight "
-            "to numbers that have appeared fewer times in the lookback window.\n\n"
-            "**Key parameters**: `lookback_days` (default 365), `selection_weight` (default 0.7).\n\n"
-            "**Use case**: Tests the complementary hypothesis that rarely-drawn numbers are "
-            "more likely to appear (mean-reversion / gambler's fallacy)."
+        "Chiến lược Số Lạnh": (
+            "**Cách hoạt động**: Giống với Chiến lược Số Nóng nhưng xếp hạng các số theo "
+            "thứ tự *ngược lại* (ít thường xuyên nhất trước). Nhóm được trọng số hóa cho trọng số cao hơn "
+            "cho các số xuất hiện ít hơn trong cửa sổ nhìn lại.\n\n"
+            "**Tham số chính**: `lookback_days` (mặc định 365), `selection_weight` (mặc định 0.7).\n\n"
+            "**Trường hợp sử dụng**: Kiểm tra giả thuyết bổ sung rằng các số rất ít được rút "
+            "có nhiều khả năng xuất hiện hơn (đảo chiều trung bình / ngộ nhận của người cờ bạc)."
         ),
         "Not Repeat Strategy": (
             "**How it works**: Collects all numbers that appeared in *any* draw within the "
@@ -495,22 +494,22 @@ class PredictionSummaryGenerator:
             "**Key parameters**: `half_life_days` (default 90), `hot` (default True), "
             "`selection_weight` (default 0.8)."
         ),
-        "Pair Frequency Strategy": (
-            "**How it works**: Builds a co-occurrence matrix from historical draws: "
-            "``cooccurrence[a][b]`` counts draws where numbers ``a`` and ``b`` both "
-            "appeared.  Tickets are assembled iteratively:\n\n"
-            "1. The first number is sampled proportional to individual draw frequency.\n"
-            "2. Each subsequent number is sampled proportional to its **average "
-            "co-occurrence score** with the numbers already selected.\n\n"
-            "This produces clusters of numbers that historically appear together, "
-            "exploiting second-order correlations that all single-number strategies ignore.\n\n"
-            "**Key parameter**: `lookback_days` (default 365)."
+        "Chiến lược Tần suất Cặp": (
+            "**Cách hoạt động**: Xây dựng ma trận đồng xuất hiện từ các lần quay lịch sử: "
+            "``cooccurrence[a][b]`` đếm các lần quay trong đó các số ``a`` và ``b`` cả hai "
+            "xuất hiện. Các vé được lắp ráp lặp đi lặp lại:\n\n"
+            "1. Số đầu tiên được lấy mẫu tỷ lệ với tần suất rút riêng lẻ.\n"
+            "2. Mỗi số tiếp theo được lấy mẫu theo tỷ lệ với **điểm đồng xuất hiện trung bình** "
+            "của nó với các số đã được chọn.\n\n"
+            "Điều này tạo ra các cụm các số xuất hiện cùng nhau trong lịch sử, "
+            "khai thác các tương quan bậc hai mà tất cả các chiến lược một chữ số bỏ qua.\n\n"
+            "**Tham số chính**: `lookback_days` (mặc định 365)."
         ),
     }
 
     def _strategy_docs_section(self) -> str:
         """Return a markdown section documenting every strategy."""
-        lines = ["## 📚 Strategy Descriptions\n"]
+        lines = ["## 📚 Mô tả Chiến lược\n"]
         for name, description in self._STRATEGY_DOCS.items():
             lines.append(f"### {name}\n\n{description}\n")
         return "\n".join(lines)
@@ -526,7 +525,7 @@ class PredictionSummaryGenerator:
         product_cfg = get_config(product)
         df_product = self._load_lottery_data(product)
         if df_product.is_empty():
-            return "# Error\n\nNo data available.\n"
+            return "# Lỗi\n\nKhông có dữ liệu.\n"
 
         df_pd = df_product.to_pandas()
         number_predict = product_cfg.size_output
@@ -546,12 +545,12 @@ class PredictionSummaryGenerator:
             top_k=number_predict,
         )
 
-        return f"""# 🔮 Vietlott {product.replace('_', ' ').title()} Prediction Summary
+        return f"""# 🔮 Tóm tắt Dự đoán Vietlott {product.replace('_', ' ').title()}
 
-> **Generated**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+> **Được tạo**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 >
-> This document contains machine learning predictions for Vietnamese lottery data.
-> This is an experimental module for educational purposes only.
+> Tài liệu này chứa các dự đoán học máy cho dữ liệu xổ số Việt Nam.
+> Đây là một mô-đun thử nghiệm chỉ dành cho mục đích giáo dục.
 
 {roi_table}
 
@@ -561,9 +560,9 @@ class PredictionSummaryGenerator:
 
 ---
 
-## ⚠️ Disclaimer
+## ⚠️ Tuyên bố Miễn trách nhiệm
 
-This prediction summary is for educational and research purposes only. Lottery outcomes are random and cannot be reliably predicted. Never gamble more than you can afford to lose.
+Tóm tắt dự đoán này chỉ dành cho mục đích giáo dục và nghiên cứu. Kết quả xổ số ngẫu nhiên và không thể dự đoán một cách đáng tin cậy. Không bao giờ cờ bạc nhiều hơn những gì bạn có thể mất được.
 """
 
     def save_prediction_summary(self, product: str = "power_655", output_path: Optional[Path] = None) -> None:
@@ -578,9 +577,9 @@ This prediction summary is for educational and research purposes only. Lottery o
             with output_path.open("w", encoding="utf-8") as ofile:
                 ofile.write(summary_content)
 
-            logger.info(f"Prediction summary successfully written to {output_path.absolute()}")
+            logger.info(f"Tóm tắt dự đoán đã được lưu thành công vào {output_path.absolute()}")
         except Exception as e:
-            logger.error(f"Error saving prediction summary: {e}")
+            logger.error(f"Lỗi khi lưu tóm tắt dự đoán: {e}")
             raise
 
 
