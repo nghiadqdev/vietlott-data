@@ -597,24 +597,43 @@ class PredictionSummaryGenerator:
         product: str,
         top_k: int = 5,
         samples_per_strategy: int = 200,
+        oos_days: int = 365,
+        oos_draws: Optional[int] = None,
     ) -> str:
-        """Generate top-k likely numbers for the next draw by ensembling strategy simulations."""
+        """Generate next-draw forecasts for full-history and dynamic-memory modes."""
         if not strategies or df_pd.empty or "date" not in df_pd.columns:
             return "## 🔭 Next Draw Number Forecast\n\n> Not enough data to generate forecast.\n"
+
+        import pandas as pd
 
         product_cfg = get_config(product)
         last_date = df_pd["date"].max()
         if not hasattr(last_date, "to_pydatetime"):
             # Normalize to pandas-compatible datetime scalar for strategy comparisons.
-            import pandas as pd
-
             last_date = pd.to_datetime(last_date)
         next_draw_date = last_date + product_cfg.interval
         display_next_draw_date = next_draw_date.date() if hasattr(next_draw_date, "date") else next_draw_date
 
-        overall_counter: Counter[int] = Counter()
+        # Derive OOS window for dynamic-memory weighting.
+        date_series = pd.to_datetime(df_pd["date"])
+        if oos_draws is not None and oos_draws > 0:
+            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
+            if unique_dates_desc:
+                cutoff = unique_dates_desc[min(oos_draws - 1, len(unique_dates_desc) - 1)]
+                oos_mode_text = f"{oos_draws} kỳ quay gần nhất"
+            else:
+                cutoff = pd.to_datetime(last_date)
+                oos_mode_text = "không xác định"
+        else:
+            days = oos_days if oos_days >= 1 else 365
+            cutoff = pd.to_datetime(last_date) - pd.Timedelta(days=days)
+            oos_mode_text = f"{days} ngày gần nhất"
+
+        overall_counter_full: Counter[int] = Counter()
+        overall_score_dynamic: Dict[int, float] = {}
         per_strategy_lines: List[str] = []
         strategy_roi_list = []
+        strategy_oos_roi: Dict[str, float] = {}
 
         for name, _, model in strategies:
             strategy_counter: Counter[int] = Counter()
@@ -622,23 +641,52 @@ class PredictionSummaryGenerator:
                 predicted = model.predict(next_draw_date)
                 strategy_counter.update(predicted)
 
-            overall_counter.update(strategy_counter)
+            overall_counter_full.update(strategy_counter)
             top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
+
+            # Full-history ROI.
             cost, gain, profit = model.revenue()
             roi = (profit / cost * 100) if cost > 0 else 0.0
             strategy_roi_list.append((name, top_numbers, roi))
+
+            # OOS ROI for dynamic-memory weighting.
+            oos_roi = 0.0
+            df_eval = model.df_backtest_evaluate
+            if df_eval is not None and not df_eval.empty:
+                eval_dates = pd.to_datetime(df_eval["date"])
+                oos_eval = df_eval.loc[eval_dates >= cutoff].copy()
+                if not oos_eval.empty:
+                    correct_num = oos_eval["correct_num"].apply(self._to_int).astype(int)
+                    oos_cost = len(oos_eval) * model.ticket_price
+                    oos_gain = correct_num.map(model.prices).fillna(0).astype(int).sum()
+                    oos_profit = oos_gain - oos_cost
+                    oos_roi = (oos_profit / oos_cost * 100) if oos_cost > 0 else 0.0
+            strategy_oos_roi[name] = oos_roi
+
+            # Convert OOS ROI into non-negative weight for dynamic ensemble.
+            weight = max(0.0, oos_roi) + 1.0
+            for num, cnt in strategy_counter.items():
+                overall_score_dynamic[num] = overall_score_dynamic.get(num, 0.0) + cnt * weight
         
         # Sort by ROI in descending order (highest profit first)
         strategy_roi_list.sort(key=lambda x: x[2], reverse=True)
         for name, top_numbers, _ in strategy_roi_list:
             per_strategy_lines.append(f"| {name} | {top_numbers} |")
 
-        top_overall = overall_counter.most_common(top_k)
+        top_overall_full = overall_counter_full.most_common(top_k)
+        top_overall_dynamic = sorted(overall_score_dynamic.items(), key=lambda x: x[1], reverse=True)[:top_k]
+
         total_tickets = len(strategies) * samples_per_strategy
-        overall_rows = []
-        for number, score in top_overall:
+        overall_rows_full = []
+        for number, score in top_overall_full:
             ticket_presence = score / total_tickets * 100 if total_tickets > 0 else 0
-            overall_rows.append(f"| {number} | {score} | {ticket_presence:.2f}% |")
+            overall_rows_full.append(f"| {number} | {score} | {ticket_presence:.2f}% |")
+
+        total_dynamic_score = sum(overall_score_dynamic.values())
+        overall_rows_dynamic = []
+        for number, score in top_overall_dynamic:
+            score_share = score / total_dynamic_score * 100 if total_dynamic_score > 0 else 0
+            overall_rows_dynamic.append(f"| {number} | {score:.1f} | {score_share:.2f}% |")
         
         # Sort per_strategy_lines is already done above in the loop
 
@@ -648,11 +696,19 @@ class PredictionSummaryGenerator:
 > Phương pháp: mỗi chiến lược mô phỏng **{samples_per_strategy}** vé, sau đó tất cả vé được tổng hợp.
 > Đây là xếp hạng xác suất, không phải các số trúng đảm bảo.
 
-### {top_k} số ứng cử viên hàng đầu (tập hợp)
+### Bảng A - {top_k} số ứng cử viên theo Toàn kỳ
 
 | Số | Điểm Tập hợp | Xuất hiện trong Vé |
 |--------|----------------|---------------------|
-{chr(10).join(overall_rows)}
+{chr(10).join(overall_rows_full)}
+
+### Bảng B - {top_k} số ứng cử viên theo Khung nhớ động
+
+> Trọng số chiến lược được tính theo ROI OOS trong **{oos_mode_text}**.
+
+| Số | Điểm Động (weighted) | Tỷ trọng Điểm Động |
+|--------|-----------------------|--------------------|
+{chr(10).join(overall_rows_dynamic)}
 
 ### {top_k} hàng đầu theo Chiến lược
 
@@ -966,6 +1022,8 @@ class PredictionSummaryGenerator:
             df_pd,
             product=product,
             top_k=number_predict,
+            oos_days=oos_days,
+            oos_draws=oos_draws,
         )
         oos_section = self._generate_oos_section(
             strategies,
