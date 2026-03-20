@@ -10,7 +10,10 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 from collections import Counter
-from typing import List, Optional, Tuple
+import json
+import random
+from statistics import mean, pstdev
+from typing import Dict, List, Optional, Tuple
 
 import polars as pl
 from loguru import logger
@@ -36,7 +39,162 @@ class PredictionSummaryGenerator:
     """Generator for prediction summary."""
 
     def __init__(self):
-        pass
+        self.history_path = Path(__file__).parent / "prediction_run_history.jsonl"
+
+    def _set_seed(self, seed: Optional[int]) -> None:
+        """Set RNG seeds for deterministic runs when a seed is provided."""
+        if seed is None:
+            return
+
+        random.seed(seed)
+        try:
+            import numpy as np
+
+            np.random.seed(seed)
+        except Exception:
+            # Numpy is optional for deterministic behavior in strategies using stdlib random.
+            pass
+
+    def _collect_strategy_metrics(self, strategies: List[_StrategyEntry]) -> List[Dict[str, float]]:
+        """Collect per-strategy metrics used for stability analysis and history logging."""
+        metrics: List[Dict[str, float]] = []
+        for name, _, model in strategies:
+            cost, gain, profit = model.revenue()
+            roi = (profit / cost * 100) if cost > 0 else 0.0
+            metrics.append({
+                "name": name,
+                "cost": float(cost),
+                "gain": float(gain),
+                "profit": float(profit),
+                "roi": float(roi),
+            })
+        return metrics
+
+    def _stability_section(self, run_metrics: List[List[Dict[str, float]]]) -> str:
+        """Build a multi-seed stability summary section."""
+        if len(run_metrics) <= 1:
+            return ""
+
+        by_strategy: Dict[str, List[Dict[str, float]]] = {}
+        for run in run_metrics:
+            for item in run:
+                by_strategy.setdefault(item["name"], []).append(item)
+
+        rows = []
+        for name, items in by_strategy.items():
+            rois = [x["roi"] for x in items]
+            profits = [x["profit"] for x in items]
+            rows.append(
+                (
+                    name,
+                    mean(rois),
+                    pstdev(rois) if len(rois) > 1 else 0.0,
+                    mean(profits),
+                    pstdev(profits) if len(profits) > 1 else 0.0,
+                )
+            )
+
+        rows.sort(key=lambda x: x[1], reverse=True)
+        lines = [
+            "| Chiến lược | ROI TB | ROI Độ lệch chuẩn | Lợi nhuận TB (VND) | Lợi nhuận Độ lệch chuẩn |",
+            "|------------|--------|-------------------|--------------------|--------------------------|",
+        ]
+        for name, roi_avg, roi_std, profit_avg, profit_std in rows:
+            lines.append(
+                f"| {name} | {roi_avg:.2f}% | {roi_std:.2f}% | {profit_avg:,.0f} | {profit_std:,.0f} |"
+            )
+
+        return f"""## 📈 Độ ổn định Nhiều Seed
+
+> Bảng dưới tổng hợp kết quả qua **{len(run_metrics)} lần chạy seed**.
+> Ưu tiên chiến lược có ROI trung bình cao và độ lệch chuẩn thấp.
+
+{chr(10).join(lines)}
+"""
+
+    def _append_history(
+        self,
+        *,
+        product: str,
+        seed: Optional[int],
+        seed_runs: int,
+        output_path: Path,
+        run_metrics: List[List[Dict[str, float]]],
+    ) -> None:
+        """Append one JSONL record to persistent run history for long-term analysis."""
+        record = {
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "product": product,
+            "seed": seed,
+            "seed_runs": seed_runs,
+            "output_path": str(output_path),
+            "runs": run_metrics,
+        }
+        self.history_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.history_path.open("a", encoding="utf-8") as hist:
+            hist.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    def _history_leaderboard_section(self, product: str, history_window: int) -> str:
+        """Build leaderboard aggregated from recent history records for a product."""
+        if history_window < 1 or not self.history_path.exists():
+            return ""
+
+        records = []
+        with self.history_path.open("r", encoding="utf-8") as hist:
+            for line in hist:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except Exception:
+                    continue
+                if obj.get("product") == product:
+                    records.append(obj)
+
+        if not records:
+            return ""
+
+        recent = records[-history_window:]
+        by_strategy: Dict[str, List[float]] = {}
+        for rec in recent:
+            for run in rec.get("runs", []):
+                for item in run:
+                    name = item.get("name")
+                    roi = item.get("roi")
+                    if name is None or roi is None:
+                        continue
+                    by_strategy.setdefault(name, []).append(float(roi))
+
+        if not by_strategy:
+            return ""
+
+        rows = []
+        for name, rois in by_strategy.items():
+            rows.append(
+                (
+                    name,
+                    mean(rois),
+                    pstdev(rois) if len(rois) > 1 else 0.0,
+                    len(rois),
+                )
+            )
+
+        rows.sort(key=lambda x: x[1], reverse=True)
+        lines = [
+            "| Hạng | Chiến lược | ROI TB lịch sử | ROI Độ lệch chuẩn | Số run |",
+            "|------|------------|----------------|-------------------|--------|",
+        ]
+        for idx, (name, roi_avg, roi_std, count) in enumerate(rows, start=1):
+            lines.append(f"| {idx} | {name} | {roi_avg:.2f}% | {roi_std:.2f}% | {count} |")
+
+        return f"""## 🧾 Leaderboard Lịch sử
+
+> Tổng hợp từ **{len(recent)} bản ghi gần nhất** của sản phẩm `{product}`.
+> Bảng này giúp ưu tiên chiến lược ổn định theo thời gian, không chỉ theo một lần chạy.
+
+{chr(10).join(lines)}
+"""
 
     # ------------------------------------------------------------------
     # Data loading
@@ -432,6 +590,85 @@ class PredictionSummaryGenerator:
 {chr(10).join(rows_sorted)}
 """
 
+    def _generate_oos_section(
+        self,
+        strategies: List[_StrategyEntry],
+        df_pd,
+        oos_days: int,
+        oos_draws: Optional[int] = None,
+    ) -> str:
+        """Generate rolling out-of-sample summary by recent days or recent draw count."""
+        if not strategies or df_pd.empty or "date" not in df_pd.columns:
+            return ""
+
+        import pandas as pd
+
+        last_date = pd.to_datetime(df_pd["date"]).max()
+        date_series = pd.to_datetime(df_pd["date"])
+
+        if oos_draws is not None and oos_draws > 0:
+            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
+            if not unique_dates_desc:
+                return ""
+            if oos_draws > len(unique_dates_desc):
+                cutoff = min(unique_dates_desc)
+            else:
+                cutoff = unique_dates_desc[oos_draws - 1]
+            oos_mode_text = f"**{oos_draws} kỳ quay gần nhất**"
+        else:
+            if oos_days < 1:
+                return ""
+            cutoff = last_date - pd.Timedelta(days=oos_days)
+            oos_mode_text = f"**{oos_days} ngày gần nhất**"
+
+        rows = []
+        for name, _, model in strategies:
+            df_eval = model.df_backtest_evaluate
+            if df_eval is None or df_eval.empty:
+                continue
+
+            eval_dates = pd.to_datetime(df_eval["date"])
+            oos_eval = df_eval.loc[eval_dates >= cutoff].copy()
+            if oos_eval.empty:
+                continue
+
+            correct_num = oos_eval["correct_num"].apply(self._to_int).astype(int)
+            cost = len(oos_eval) * model.ticket_price
+            gain = correct_num.map(model.prices).fillna(0).astype(int).sum()
+            profit = gain - cost
+            roi = (profit / cost * 100) if cost > 0 else 0.0
+
+            c6 = int((correct_num >= 6).sum())
+            c5 = int((correct_num == 5).sum())
+            c4 = int((correct_num == 4).sum())
+            c3 = int((correct_num == 3).sum())
+
+            period_text = f"{oos_eval['date'].min()} → {oos_eval['date'].max()} ({len(oos_eval):,} dự đoán)"
+            financial_text = f"chi {cost:,}, lợi {gain:,}, roi {roi:.2f}%"
+            match_text = f"6+: {c6}, 5: {c5}, 4: {c4}, 3: {c3}"
+
+            row_text = "| " + " | ".join([name, period_text, financial_text, match_text]) + " |"
+            rows.append((roi, row_text))
+
+        if not rows:
+            return ""
+
+        rows.sort(key=lambda x: x[0], reverse=True)
+        rows_sorted = [row_text for _, row_text in rows]
+
+        lines = [
+            "## 🧪 Đánh giá Rolling Out-of-Sample",
+            "",
+            f"> Cửa sổ kiểm thử ngoài mẫu: {oos_mode_text} (đến {last_date.date()}).",
+            "> Mục tiêu: đánh giá chiến lược trên giai đoạn gần đây, giảm thiên lệch do fit vào toàn bộ lịch sử.",
+            "",
+            "| Chiến lược | Giai đoạn OOS | Tài chính OOS | Phân bố trùng khớp OOS |",
+            "|------------|----------------|---------------|--------------------------|",
+            *rows_sorted,
+            "",
+        ]
+        return "\n".join(lines)
+
     # ------------------------------------------------------------------
     # Strategy documentation
     # ------------------------------------------------------------------
@@ -533,7 +770,15 @@ class PredictionSummaryGenerator:
     # Summary assembly
     # ------------------------------------------------------------------
 
-    def generate_prediction_summary(self, product: str = "power_655") -> str:
+    def generate_prediction_summary(
+        self,
+        product: str = "power_655",
+        seed: Optional[int] = None,
+        seed_runs: int = 1,
+        history_window: int = 30,
+        oos_days: int = 365,
+        oos_draws: Optional[int] = None,
+    ) -> Tuple[str, List[List[Dict[str, float]]]]:
         """Generate the complete prediction summary content."""
         logger.info("Starting prediction summary generation...")
 
@@ -544,12 +789,27 @@ class PredictionSummaryGenerator:
 
         df_pd = df_product.to_pandas()
         number_predict = product_cfg.size_output
-        strategies = self._build_and_run_strategies(
-            df_pd,
-            min_val=product_cfg.min_value,
-            max_val=product_cfg.max_value,
-            number_predict=number_predict,
-        )
+
+        if seed_runs < 1:
+            raise ValueError("seed_runs phải >= 1")
+
+        run_metrics: List[List[Dict[str, float]]] = []
+        strategies: Optional[List[_StrategyEntry]] = None
+
+        for i in range(seed_runs):
+            run_seed = (seed + i) if seed is not None else None
+            self._set_seed(run_seed)
+            run_strategies = self._build_and_run_strategies(
+                df_pd,
+                min_val=product_cfg.min_value,
+                max_val=product_cfg.max_value,
+                number_predict=number_predict,
+            )
+            run_metrics.append(self._collect_strategy_metrics(run_strategies))
+            if strategies is None:
+                strategies = run_strategies
+
+        assert strategies is not None
 
         roi_table = self._roi_comparison_table(strategies)
         compact_table = self._generate_compact_strategy_table(strategies, df_pd, product=product, top_k=number_predict)
@@ -559,10 +819,24 @@ class PredictionSummaryGenerator:
             product=product,
             top_k=number_predict,
         )
+        oos_section = self._generate_oos_section(
+            strategies,
+            df_pd,
+            oos_days=oos_days,
+            oos_draws=oos_draws,
+        )
+        stability_table = self._stability_section(run_metrics)
+        history_leaderboard = self._history_leaderboard_section(product=product, history_window=history_window)
+        seed_note = (
+            f"> **Seed**: {seed} (deterministic), **Seed runs**: {seed_runs}\n"
+            if seed is not None
+            else f"> **Seed**: ngẫu nhiên, **Seed runs**: {seed_runs}\n"
+        )
 
-        return f"""# 🔮 Tóm tắt Dự đoán Vietlott {product.replace('_', ' ').title()}
+        summary = f"""# 🔮 Tóm tắt Dự đoán Vietlott {product.replace('_', ' ').title()}
 
 > **Được tạo**: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+{seed_note}>
 >
 > Tài liệu này chứa các dự đoán học máy cho dữ liệu xổ số Việt Nam.
 > Đây là một mô-đun thử nghiệm chỉ dành cho mục đích giáo dục.
@@ -573,6 +847,12 @@ class PredictionSummaryGenerator:
 
 {future_forecast}
 
+{oos_section}
+
+{stability_table}
+
+{history_leaderboard}
+
 ---
 
 ## ⚠️ Tuyên bố Miễn trách nhiệm
@@ -580,17 +860,43 @@ class PredictionSummaryGenerator:
 Tóm tắt dự đoán này chỉ dành cho mục đích giáo dục và nghiên cứu. Kết quả xổ số ngẫu nhiên và không thể dự đoán một cách đáng tin cậy. Không bao giờ cờ bạc nhiều hơn những gì bạn có thể mất được.
 """
 
-    def save_prediction_summary(self, product: str = "power_655", output_path: Optional[Path] = None) -> None:
+        return summary, run_metrics
+
+    def save_prediction_summary(
+        self,
+        product: str = "power_655",
+        output_path: Optional[Path] = None,
+        seed: Optional[int] = None,
+        seed_runs: int = 1,
+        history_window: int = 30,
+        oos_days: int = 365,
+        oos_draws: Optional[int] = None,
+    ) -> None:
         """Generate and save prediction summary to file."""
         if output_path is None:
             output_name = "readme.md" if product == "power_655" else f"readme_{product}.md"
             output_path = Path(__file__).parent / output_name
 
         try:
-            summary_content = self.generate_prediction_summary(product=product)
+            summary_content, run_metrics = self.generate_prediction_summary(
+                product=product,
+                seed=seed,
+                seed_runs=seed_runs,
+                history_window=history_window,
+                oos_days=oos_days,
+                oos_draws=oos_draws,
+            )
 
             with output_path.open("w", encoding="utf-8") as ofile:
                 ofile.write(summary_content)
+
+            self._append_history(
+                product=product,
+                seed=seed,
+                seed_runs=seed_runs,
+                output_path=output_path,
+                run_metrics=run_metrics,
+            )
 
             logger.info(f"Tóm tắt dự đoán đã được lưu thành công vào {output_path.absolute()}")
         except Exception as e:
@@ -603,6 +909,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate prediction summary for a Vietlott product")
     parser.add_argument("--product", default="power_655", help="Product name, e.g. power_655 or power_645")
     parser.add_argument("--output", default=None, help="Optional output markdown path")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed for deterministic runs")
+    parser.add_argument("--seed-runs", type=int, default=1, help="Number of runs with sequential seeds")
+    parser.add_argument("--history-window", type=int, default=30, help="Number of recent history records for leaderboard")
+    parser.add_argument("--oos-days", type=int, default=365, help="Out-of-sample window size in days")
+    parser.add_argument("--oos-draws", type=int, default=None, help="Out-of-sample window by recent draw count")
     return parser.parse_args()
 
 
@@ -612,7 +923,15 @@ def main():
         args = parse_args()
         generator = PredictionSummaryGenerator()
         output_path = Path(args.output) if args.output else None
-        generator.save_prediction_summary(product=args.product, output_path=output_path)
+        generator.save_prediction_summary(
+            product=args.product,
+            output_path=output_path,
+            seed=args.seed,
+            seed_runs=args.seed_runs,
+            history_window=args.history_window,
+            oos_days=args.oos_days,
+            oos_draws=args.oos_draws,
+        )
         logger.info("Prediction summary generation completed successfully!")
     except Exception as e:
         logger.error(f"Failed to generate prediction summary: {e}")
