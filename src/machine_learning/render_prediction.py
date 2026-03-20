@@ -631,9 +631,10 @@ class PredictionSummaryGenerator:
 
         overall_counter_full: Counter[int] = Counter()
         overall_score_dynamic: Dict[int, float] = {}
-        per_strategy_lines: List[str] = []
+        per_strategy_lines_full: List[str] = []
+        per_strategy_lines_dynamic: List[str] = []
         strategy_roi_list = []
-        strategy_oos_roi: Dict[str, float] = {}
+        strategy_oos_list = []
 
         for name, _, model in strategies:
             strategy_counter: Counter[int] = Counter()
@@ -661,7 +662,7 @@ class PredictionSummaryGenerator:
                     oos_gain = correct_num.map(model.prices).fillna(0).astype(int).sum()
                     oos_profit = oos_gain - oos_cost
                     oos_roi = (oos_profit / oos_cost * 100) if oos_cost > 0 else 0.0
-            strategy_oos_roi[name] = oos_roi
+            strategy_oos_list.append((name, top_numbers, oos_roi))
 
             # Convert OOS ROI into non-negative weight for dynamic ensemble.
             weight = max(0.0, oos_roi) + 1.0
@@ -671,7 +672,12 @@ class PredictionSummaryGenerator:
         # Sort by ROI in descending order (highest profit first)
         strategy_roi_list.sort(key=lambda x: x[2], reverse=True)
         for name, top_numbers, _ in strategy_roi_list:
-            per_strategy_lines.append(f"| {name} | {top_numbers} |")
+            per_strategy_lines_full.append(f"| {name} | {top_numbers} |")
+
+        # Sort by OOS ROI in descending order for dynamic-memory ranking.
+        strategy_oos_list.sort(key=lambda x: x[2], reverse=True)
+        for name, top_numbers, _ in strategy_oos_list:
+            per_strategy_lines_dynamic.append(f"| {name} | {top_numbers} |")
 
         top_overall_full = overall_counter_full.most_common(top_k)
         top_overall_dynamic = sorted(overall_score_dynamic.items(), key=lambda x: x[1], reverse=True)[:top_k]
@@ -688,7 +694,7 @@ class PredictionSummaryGenerator:
             score_share = score / total_dynamic_score * 100 if total_dynamic_score > 0 else 0
             overall_rows_dynamic.append(f"| {number} | {score:.1f} | {score_share:.2f}% |")
         
-        # Sort per_strategy_lines is already done above in the loop
+        # Per-strategy tables are already sorted above.
 
         return f"""## 🔭 Dự đoán Số cho Lần Quay Tiếp theo
 
@@ -710,11 +716,19 @@ class PredictionSummaryGenerator:
 |--------|-----------------------|--------------------|
 {chr(10).join(overall_rows_dynamic)}
 
-### {top_k} hàng đầu theo Chiến lược
+### {top_k} hàng đầu theo Chiến lược - Bảng A (xếp theo ROI Toàn kỳ)
 
 | Chiến lược | Số hàng đầu |
 |----------|-------------|
-{chr(10).join(per_strategy_lines)}
+{chr(10).join(per_strategy_lines_full)}
+
+### {top_k} hàng đầu theo Chiến lược - Bảng B (xếp theo ROI Khung nhớ động)
+
+> Xếp hạng theo ROI OOS trong **{oos_mode_text}**.
+
+| Chiến lược | Số hàng đầu |
+|----------|-------------|
+{chr(10).join(per_strategy_lines_dynamic)}
 """
 
     def _generate_compact_strategy_table(
