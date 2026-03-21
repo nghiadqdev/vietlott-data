@@ -242,7 +242,7 @@ class PredictionSummaryGenerator:
     # ------------------------------------------------------------------
 
     def _build_and_run_strategies(
-        self,
+        self, 
         df_pd,
         *,
         min_val: int,
@@ -643,7 +643,8 @@ class PredictionSummaryGenerator:
                 strategy_counter.update(predicted)
 
             overall_counter_full.update(strategy_counter)
-            top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
+            top_numbers_by_score = [n for n, _ in strategy_counter.most_common(top_k)]
+            top_numbers = ", ".join(str(n) for n in sorted(top_numbers_by_score, reverse=True))
 
             # Full-history ROI.
             cost, gain, profit = model.revenue()

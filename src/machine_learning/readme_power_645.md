@@ -1,7 +1,7 @@
 # 🔮 Tóm tắt Dự đoán Vietlott Power 645
 
-> **Được tạo**: 2026-03-20 22:38:31
-> **Seed**: 42 (deterministic), **Seed runs**: 3
+> **Được tạo**: 2026-03-21 22:05:02
+> **Seed**: ngẫu nhiên, **Seed runs**: 1
 >
 >
 > Tài liệu này chứa các dự đoán học máy cho dữ liệu xổ số Việt Nam.
@@ -15,47 +15,47 @@
 
 | Hạng | Chiến lược | Tổng Chi phí (tr) | Tổng Lợi nhuận (tr) | Lợi nhuận ròng (tr) | ROI |
 |------|----------|-----------------|-----------------|-----------------|-----|
-| 🥇 1 | Chiến lược Suy giảm Exponential | 297tr | 10,058tr | 9,761tr | 3286.53% |
-| 🥈 2 | Chiến lược Số Nóng | 297tr | 5,052.4tr | 4,755.4tr | 1601.13% |
-| 🥉 3 | Chiến lược Số Lạnh | 297tr | 5,051.9tr | 4,754.9tr | 1600.98% |
-|    4 | Chiến lược Vắng mặt Lâu dài | 297tr | 5,050.8tr | 4,753.8tr | 1600.61% |
-|    5 | Chiến lược Không Lặp lại | 297tr | 58.4tr | -238.7tr | -80.35% |
-|    6 | Chiến lược Mẫu | 297tr | 58.1tr | -238.9tr | -80.44% |
-|    7 | Chiến lược Tần suất Cặp | 297tr | 56.6tr | -240.3tr | -80.93% |
-|    8 | Chiến lược Ngẫu nhiên | 297tr | 50.9tr | -246.2tr | -82.88% |
+| 🥇 1 | Chiến lược Vắng mặt Lâu dài | 297.2tr | 10,050.6tr | 9,753.5tr | 3281.78% |
+| 🥈 2 | Chiến lược Số Nóng | 297.2tr | 5,061.4tr | 4,764.2tr | 1603.03% |
+| 🥉 3 | Chiến lược Suy giảm Exponential | 297.2tr | 5,055.4tr | 4,758.2tr | 1601.03% |
+|    4 | Chiến lược Mẫu | 297.2tr | 5,055.3tr | 4,758.1tr | 1600.98% |
+|    5 | Chiến lược Số Lạnh | 297.2tr | 5,049.5tr | 4,752.3tr | 1599.02% |
+|    6 | Chiến lược Không Lặp lại | 297.2tr | 58tr | -239.2tr | -80.48% |
+|    7 | Chiến lược Tần suất Cặp | 297.2tr | 55.5tr | -241.7tr | -81.33% |
+|    8 | Chiến lược Ngẫu nhiên | 297.2tr | 52.1tr | -245.1tr | -82.47% |
 
 
 ## 📊 So sánh ROI: Benchmark vs Khung nhớ động
 
 > Bảng A là benchmark cố định trên toàn bộ lịch sử.
-> Bảng B là ROI ở cửa sổ gần đây **120 kỳ quay gần nhất** để mô phỏng vận hành động.
+> Bảng B là ROI ở cửa sổ gần đây **365 ngày gần nhất** để mô phỏng vận hành động.
 > Cột **ΔROI** giúp bạn thấy mức thay đổi khi chuyển từ khung nhớ cố định sang khung nhớ gần.
 
 ### Bảng A: ROI Benchmark (Toàn kỳ)
 
 | Hạng | Chiến lược | Tổng Chi phí (tr) | Tổng Lợi nhuận (tr) | Lợi nhuận ròng (tr) | ROI Toàn kỳ |
 |------|------------|-------------------|---------------------|---------------------|-------------|
-| 🥇 1 | Chiến lược Suy giảm Exponential | 297tr | 10,058tr | 9,761tr | 3286.53% |
-| 🥈 2 | Chiến lược Số Nóng | 297tr | 5,052.4tr | 4,755.4tr | 1601.13% |
-| 🥉 3 | Chiến lược Số Lạnh | 297tr | 5,051.9tr | 4,754.9tr | 1600.98% |
-|    4 | Chiến lược Vắng mặt Lâu dài | 297tr | 5,050.8tr | 4,753.8tr | 1600.61% |
-|    5 | Chiến lược Không Lặp lại | 297tr | 58.4tr | -238.7tr | -80.35% |
-|    6 | Chiến lược Mẫu | 297tr | 58.1tr | -238.9tr | -80.44% |
-|    7 | Chiến lược Tần suất Cặp | 297tr | 56.6tr | -240.3tr | -80.93% |
-|    8 | Chiến lược Ngẫu nhiên | 297tr | 50.9tr | -246.2tr | -82.88% |
+| 🥇 1 | Chiến lược Vắng mặt Lâu dài | 297.2tr | 10,050.6tr | 9,753.5tr | 3281.78% |
+| 🥈 2 | Chiến lược Số Nóng | 297.2tr | 5,061.4tr | 4,764.2tr | 1603.03% |
+| 🥉 3 | Chiến lược Suy giảm Exponential | 297.2tr | 5,055.4tr | 4,758.2tr | 1601.03% |
+|    4 | Chiến lược Mẫu | 297.2tr | 5,055.3tr | 4,758.1tr | 1600.98% |
+|    5 | Chiến lược Số Lạnh | 297.2tr | 5,049.5tr | 4,752.3tr | 1599.02% |
+|    6 | Chiến lược Không Lặp lại | 297.2tr | 58tr | -239.2tr | -80.48% |
+|    7 | Chiến lược Tần suất Cặp | 297.2tr | 55.5tr | -241.7tr | -81.33% |
+|    8 | Chiến lược Ngẫu nhiên | 297.2tr | 52.1tr | -245.1tr | -82.47% |
 
 ### Bảng B: ROI Khung nhớ động (OOS gần đây)
 
 | Hạng | Chiến lược | Chi phí OOS (tr) | Lợi nhuận OOS (tr) | ROI OOS | ΔROI (OOS - Toàn kỳ) |
 |------|------------|------------------|--------------------|---------|-----------------------|
-| 🥇 1 | Chiến lược Số Lạnh | 24tr | 5,004.4tr | 20751.46% | +19150.48% |
-| 🥈 2 | Chiến lược Không Lặp lại | 24tr | 11.7tr | -51.25% | +29.10% |
-| 🥉 3 | Chiến lược Mẫu | 24tr | 5.7tr | -76.25% | +4.19% |
-|    4 | Chiến lược Số Nóng | 24tr | 5.2tr | -78.33% | -1679.46% |
-|    5 | Chiến lược Tần suất Cặp | 24tr | 4.7tr | -80.42% | +0.51% |
-|    6 | Chiến lược Suy giảm Exponential | 24tr | 4.2tr | -82.50% | -3369.03% |
-|    7 | Chiến lược Vắng mặt Lâu dài | 24tr | 4.2tr | -82.71% | -1683.31% |
-|    8 | Chiến lược Ngẫu nhiên | 24tr | 3tr | -87.29% | -4.41% |
+| 🥇 1 | Chiến lược Không Lặp lại | 31.4tr | 12.8tr | -59.39% | +21.09% |
+| 🥈 2 | Chiến lược Số Nóng | 31.4tr | 8.7tr | -72.29% | -1675.32% |
+| 🥉 3 | Chiến lược Tần suất Cặp | 31.4tr | 8.4tr | -73.09% | +8.24% |
+|    4 | Chiến lược Suy giảm Exponential | 31.4tr | 6.2tr | -80.10% | -1681.12% |
+|    5 | Chiến lược Mẫu | 31.4tr | 5.8tr | -81.69% | -1682.66% |
+|    6 | Chiến lược Ngẫu nhiên | 31.4tr | 5.5tr | -82.32% | +0.14% |
+|    7 | Chiến lược Vắng mặt Lâu dài | 31.4tr | 5.2tr | -83.44% | -3365.22% |
+|    8 | Chiến lược Số Lạnh | 31.4tr | 5tr | -84.08% | -1683.10% |
 
 
 ## 📉 Biểu đồ ROI Tổng quát
@@ -65,36 +65,36 @@
 
 | Chiến lược | ROI | Biểu đồ tương đối |
 |------------|-----|-------------------|
-| Chiến lược Suy giảm Exponential | 3286.53% | ++++++++++++++++++++++++ |
-| Chiến lược Số Nóng | 1601.13% | +++++++++++ |
-| Chiến lược Số Lạnh | 1600.98% | +++++++++++ |
-| Chiến lược Vắng mặt Lâu dài | 1600.61% | +++++++++++ |
-| Chiến lược Không Lặp lại | -80.35% | - |
-| Chiến lược Mẫu | -80.44% | - |
-| Chiến lược Tần suất Cặp | -80.93% | - |
-| Chiến lược Ngẫu nhiên | -82.88% | - |
+| Chiến lược Vắng mặt Lâu dài | 3281.78% | ++++++++++++++++++++++++ |
+| Chiến lược Số Nóng | 1603.03% | +++++++++++ |
+| Chiến lược Suy giảm Exponential | 1601.03% | +++++++++++ |
+| Chiến lược Mẫu | 1600.98% | +++++++++++ |
+| Chiến lược Số Lạnh | 1599.02% | +++++++++++ |
+| Chiến lược Không Lặp lại | -80.48% | - |
+| Chiến lược Tần suất Cặp | -81.33% | - |
+| Chiến lược Ngẫu nhiên | -82.47% | - |
 
 
 ## 📋 Bảng Chiến lược Tóm tắt
 
-> Ngày dự đoán: **2026-03-20**.
+> Ngày dự đoán: **2026-03-22**.
 > Dạng tóm tắt: Cấu hình, Kỳ Kiểm thử, Tóm tắt Tài chính, Phân bố Trùng khớp, KQ nổi bật (>=5 số trùng), 6 Hàng đầu.
 
 | Chiến lược | Cấu hình | Kỳ Kiểm thử | Tóm tắt Tài chính | Phân bố Trùng khớp | KQ nổi bật (>=5) | 6 Hàng đầu |
 |----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
-| Chiến lược Suy giảm Exponential | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 10,058tr, roi 3286.53% | 5+: 2, 4: 49, 3: 670 | 2 hàng với >=5 số trùng | 42, 36, 23, 45, 31, 28 |
-| Chiến lược Số Nóng | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 5,052.4tr, roi 1601.13% | 5+: 1, 4: 44, 3: 607 | 1 hàng với >=5 số trùng | 28, 24, 17, 30, 32, 42 |
-| Chiến lược Số Lạnh | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 5,051.9tr, roi 1600.98% | 5+: 1, 4: 36, 3: 678 | 1 hàng với >=5 số trùng | 27, 33, 3, 19, 38, 35 |
-| Chiến lược Vắng mặt Lâu dài | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 5,050.8tr, roi 1600.61% | 5+: 1, 4: 41, 3: 606 | 1 hàng với >=5 số trùng | 43, 41, 40, 24, 27, 29 |
-| Chiến lược Không Lặp lại | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 58.4tr, roi -80.35% | 5+: 0, 4: 59, 3: 577 | 0 hàng với >=5 số trùng | 39, 43, 27, 41, 3, 30 |
-| Chiến lược Mẫu | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 58.1tr, roi -80.44% | 5+: 0, 4: 47, 3: 692 | 0 hàng với >=5 số trùng | 8, 20, 27, 31, 35, 32 |
-| Chiến lược Tần suất Cặp | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 56.6tr, roi -80.93% | 5+: 0, 4: 49, 3: 643 | 0 hàng với >=5 số trùng | 42, 7, 28, 31, 43, 23 |
-| Chiến lược Ngẫu nhiên | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-18 00:00:00 (1,485 lần quay/29,700 dự đoán) | chi 297tr, lợi 50.9tr, roi -82.88% | 5+: 0, 4: 37, 3: 647 | 0 hàng với >=5 số trùng | 6, 1, 23, 22, 28, 12 |
+| Chiến lược Vắng mặt Lâu dài | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 10,050.6tr, roi 3281.78% | 5+: 2, 4: 38, 3: 633 | 2 hàng với >=5 số trùng | 29, 39, 27, 3, 17, 45 |
+| Chiến lược Số Nóng | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 5,061.4tr, roi 1603.03% | 5+: 1, 4: 58, 3: 648 | 1 hàng với >=5 số trùng | 5, 23, 43, 36, 30, 29 |
+| Chiến lược Suy giảm Exponential | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 5,055.4tr, roi 1601.03% | 5+: 1, 4: 45, 3: 659 | 1 hàng với >=5 số trùng | 22, 23, 43, 28, 38, 2 |
+| Chiến lược Mẫu | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 5,055.3tr, roi 1600.98% | 5+: 1, 4: 48, 3: 626 | 1 hàng với >=5 số trùng | 9, 7, 12, 37, 8, 4 |
+| Chiến lược Số Lạnh | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 5,049.5tr, roi 1599.02% | 5+: 1, 4: 35, 3: 640 | 1 hàng với >=5 số trùng | 25, 12, 33, 40, 17, 14 |
+| Chiến lược Không Lặp lại | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 58tr, roi -80.48% | 5+: 0, 4: 60, 3: 560 | 0 hàng với >=5 số trùng | 3, 5, 27, 30, 39, 41 |
+| Chiến lược Tần suất Cặp | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 55.5tr, roi -81.33% | 5+: 0, 4: 41, 3: 700 | 0 hàng với >=5 số trùng | 31, 7, 23, 29, 44, 43 |
+| Chiến lược Ngẫu nhiên | dải 1-45, chọn 6, vé/ngày 20 | 2016-07-20 00:00:00 → 2026-03-20 00:00:00 (1,486 lần quay/29,720 dự đoán) | chi 297.2tr, lợi 52.1tr, roi -82.47% | 5+: 0, 4: 43, 3: 612 | 0 hàng với >=5 số trùng | 29, 33, 31, 27, 16, 7 |
 
 
 ## 🔭 Dự đoán Số cho Lần Quay Tiếp theo
 
-> Dự đoán cho lần quay tiếp theo vào: **2026-03-20**.
+> Dự đoán cho lần quay tiếp theo vào: **2026-03-22**.
 > Phương pháp: mỗi chiến lược mô phỏng **200** vé, sau đó tất cả vé được tổng hợp.
 > Đây là xếp hạng xác suất, không phải các số trúng đảm bảo.
 
@@ -102,104 +102,89 @@
 
 | Số | Điểm Tập hợp | Xuất hiện trong Vé |
 |--------|----------------|---------------------|
-| 5 | 433 | 27.06% |
-| 3 | 413 | 25.81% |
-| 43 | 413 | 25.81% |
-| 41 | 408 | 25.50% |
-| 30 | 404 | 25.25% |
-| 27 | 400 | 25.00% |
+| 30 | 462 | 28.88% |
+| 39 | 452 | 28.25% |
+| 3 | 432 | 27.00% |
+| 41 | 432 | 27.00% |
+| 27 | 427 | 26.69% |
+| 5 | 418 | 26.12% |
 
 ### Bảng B - 6 số ứng cử viên theo Khung nhớ động
 
-> Trọng số chiến lược được tính theo ROI OOS trong **120 kỳ quay gần nhất**.
+> Trọng số chiến lược được tính theo ROI OOS trong **365 ngày gần nhất**.
 
 | Số | Điểm Động (weighted) | Tỷ trọng Điểm Động |
 |--------|-----------------------|--------------------|
-| 15 | 871809.2 | 3.50% |
-| 11 | 788708.4 | 3.17% |
-| 40 | 768034.0 | 3.08% |
-| 10 | 767959.0 | 3.08% |
-| 38 | 747284.5 | 3.00% |
-| 6 | 747241.5 | 3.00% |
+| 30 | 462.0 | 4.81% |
+| 39 | 452.0 | 4.71% |
+| 3 | 432.0 | 4.50% |
+| 41 | 432.0 | 4.50% |
+| 27 | 427.0 | 4.45% |
+| 5 | 418.0 | 4.35% |
 
 ### 6 hàng đầu theo Chiến lược - Bảng A (xếp theo ROI Toàn kỳ)
 
 | Chiến lược | Số hàng đầu |
 |----------|-------------|
-| Chiến lược Suy giảm Exponential | 44, 1, 31, 6, 7, 43 |
-| Chiến lược Số Nóng | 23, 31, 21, 28, 32, 36 |
-| Chiến lược Số Lạnh | 15, 11, 10, 40, 6, 33 |
-| Chiến lược Vắng mặt Lâu dài | 5, 27, 41, 30, 38, 39 |
-| Chiến lược Không Lặp lại | 3, 41, 43, 39, 27, 30 |
-| Chiến lược Mẫu | 13, 35, 14, 7, 18, 4 |
-| Chiến lược Tần suất Cặp | 28, 9, 44, 7, 45, 42 |
-| Chiến lược Ngẫu nhiên | 20, 35, 42, 15, 40, 11 |
+| Chiến lược Vắng mặt Lâu dài | 39, 30, 29, 17, 15, 1 |
+| Chiến lược Số Nóng | 45, 42, 31, 28, 20, 12 |
+| Chiến lược Suy giảm Exponential | 42, 31, 28, 7, 2, 1 |
+| Chiến lược Mẫu | 30, 23, 6, 4, 3, 2 |
+| Chiến lược Số Lạnh | 41, 40, 33, 25, 18, 3 |
+| Chiến lược Không Lặp lại | 41, 39, 30, 27, 5, 3 |
+| Chiến lược Tần suất Cặp | 45, 43, 42, 28, 22, 17 |
+| Chiến lược Ngẫu nhiên | 42, 41, 39, 35, 26, 2 |
 
 ### 6 hàng đầu theo Chiến lược - Bảng B (xếp theo ROI Khung nhớ động)
 
-> Xếp hạng theo ROI OOS trong **120 kỳ quay gần nhất**.
+> Xếp hạng theo ROI OOS trong **365 ngày gần nhất**.
 
 | Chiến lược | Số hàng đầu |
 |----------|-------------|
-| Chiến lược Số Lạnh | 15, 11, 10, 40, 6, 33 |
-| Chiến lược Không Lặp lại | 3, 41, 43, 39, 27, 30 |
-| Chiến lược Mẫu | 13, 35, 14, 7, 18, 4 |
-| Chiến lược Số Nóng | 23, 31, 21, 28, 32, 36 |
-| Chiến lược Tần suất Cặp | 28, 9, 44, 7, 45, 42 |
-| Chiến lược Suy giảm Exponential | 44, 1, 31, 6, 7, 43 |
-| Chiến lược Vắng mặt Lâu dài | 5, 27, 41, 30, 38, 39 |
-| Chiến lược Ngẫu nhiên | 20, 35, 42, 15, 40, 11 |
+| Chiến lược Không Lặp lại | 41, 39, 30, 27, 5, 3 |
+| Chiến lược Số Nóng | 45, 42, 31, 28, 20, 12 |
+| Chiến lược Tần suất Cặp | 45, 43, 42, 28, 22, 17 |
+| Chiến lược Suy giảm Exponential | 42, 31, 28, 7, 2, 1 |
+| Chiến lược Mẫu | 30, 23, 6, 4, 3, 2 |
+| Chiến lược Ngẫu nhiên | 42, 41, 39, 35, 26, 2 |
+| Chiến lược Vắng mặt Lâu dài | 39, 30, 29, 17, 15, 1 |
+| Chiến lược Số Lạnh | 41, 40, 33, 25, 18, 3 |
 
 
 ## 🧪 Đánh giá Rolling Out-of-Sample
 
-> Cửa sổ kiểm thử ngoài mẫu: **120 kỳ quay gần nhất** (đến 2026-03-18).
+> Cửa sổ kiểm thử ngoài mẫu: **365 ngày gần nhất** (đến 2026-03-20).
 > Mục tiêu: đánh giá chiến lược trên giai đoạn gần đây, giảm thiên lệch do fit vào toàn bộ lịch sử.
 
 | Chiến lược | Giai đoạn OOS | Tài chính OOS | Phân bố trùng khớp OOS |
 |------------|----------------|---------------|--------------------------|
-| Chiến lược Số Lạnh | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 5,004.4tr, roi 20751.46% | 6+: 0, 5: 1, 4: 3, 3: 57 |
-| Chiến lược Không Lặp lại | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 11.7tr, roi -51.25% | 6+: 0, 5: 0, 4: 21, 3: 24 |
-| Chiến lược Mẫu | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 5.7tr, roi -76.25% | 6+: 0, 5: 0, 4: 6, 3: 54 |
-| Chiến lược Số Nóng | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 5.2tr, roi -78.33% | 6+: 0, 5: 0, 4: 5, 3: 54 |
-| Chiến lược Tần suất Cặp | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 4.7tr, roi -80.42% | 6+: 0, 5: 0, 4: 5, 3: 44 |
-| Chiến lược Suy giảm Exponential | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 4.2tr, roi -82.50% | 6+: 0, 5: 0, 4: 4, 3: 44 |
-| Chiến lược Vắng mặt Lâu dài | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 4.2tr, roi -82.71% | 6+: 0, 5: 0, 4: 3, 3: 53 |
-| Chiến lược Ngẫu nhiên | 2025-06-13 00:00:00 → 2026-03-18 00:00:00 (2,400 dự đoán) | chi 24tr, lợi 3tr, roi -87.29% | 6+: 0, 5: 0, 4: 1, 3: 51 |
+| Chiến lược Không Lặp lại | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 12.8tr, roi -59.39% | 6+: 0, 5: 0, 4: 21, 3: 45 |
+| Chiến lược Số Nóng | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 8.7tr, roi -72.29% | 6+: 0, 5: 0, 4: 11, 3: 64 |
+| Chiến lược Tần suất Cặp | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 8.4tr, roi -73.09% | 6+: 0, 5: 0, 4: 8, 3: 89 |
+| Chiến lược Suy giảm Exponential | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 6.2tr, roi -80.10% | 6+: 0, 5: 0, 4: 6, 3: 65 |
+| Chiến lược Mẫu | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 5.8tr, roi -81.69% | 6+: 0, 5: 0, 4: 5, 3: 65 |
+| Chiến lược Ngẫu nhiên | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 5.5tr, roi -82.32% | 6+: 0, 5: 0, 4: 4, 3: 71 |
+| Chiến lược Vắng mặt Lâu dài | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 5.2tr, roi -83.44% | 6+: 0, 5: 0, 4: 3, 3: 74 |
+| Chiến lược Số Lạnh | 2025-03-21 00:00:00 → 2026-03-20 00:00:00 (3,140 dự đoán) | chi 31.4tr, lợi 5tr, roi -84.08% | 6+: 0, 5: 0, 4: 4, 3: 60 |
 
 
-## 📈 Độ ổn định Nhiều Seed
-
-> Bảng dưới tổng hợp kết quả qua **3 lần chạy seed**.
-> Ưu tiên chiến lược có ROI trung bình cao và độ lệch chuẩn thấp.
-
-| Chiến lược | ROI TB | ROI Độ lệch chuẩn | Lợi nhuận TB (tr) | Lợi nhuận Độ lệch chuẩn (tr) |
-|------------|--------|-------------------|--------------------|--------------------------|
-| Chiến lược Ngẫu nhiên | 2723.51% | 2100.09% | 8,088.8tr | 6,237.3tr |
-| Chiến lược Suy giảm Exponential | 1602.26% | 1374.83% | 4,758.7tr | 4,083.2tr |
-| Chiến lược Mẫu | 1602.25% | 1373.87% | 4,758.7tr | 4,080.4tr |
-| Chiến lược Số Lạnh | 1601.96% | 1374.02% | 4,757.8tr | 4,080.9tr |
-| Chiến lược Số Nóng | 1039.91% | 793.46% | 3,088.5tr | 2,356.6tr |
-| Chiến lược Vắng mặt Lâu dài | 1039.26% | 793.53% | 3,086.6tr | 2,356.8tr |
-| Chiến lược Tần suất Cặp | 479.61% | 793.16% | 1,424.5tr | 2,355.7tr |
-| Chiến lược Không Lặp lại | -79.57% | 0.55% | -236.3tr | 1.6tr |
 
 
 ## 🧾 Leaderboard Lịch sử
 
-> Tổng hợp từ **10 bản ghi gần nhất** của sản phẩm `power_645`.
+> Tổng hợp từ **12 bản ghi gần nhất** của sản phẩm `power_645`.
 > Bảng này giúp ưu tiên chiến lược ổn định theo thời gian, không chỉ theo một lần chạy.
 
 | Hạng | Chiến lược | ROI TB lịch sử | ROI Độ lệch chuẩn | Số run |
 |------|------------|----------------|-------------------|--------|
-| 1 | Chiến lược Ngẫu nhiên | 2723.51% | 2100.09% | 30 |
-| 2 | Chiến lược Suy giảm Exponential | 1602.26% | 1374.83% | 30 |
-| 3 | Chiến lược Mẫu | 1602.25% | 1373.87% | 30 |
-| 4 | Chiến lược Số Lạnh | 1601.96% | 1374.02% | 30 |
-| 5 | Chiến lược Số Nóng | 1039.91% | 793.46% | 30 |
-| 6 | Chiến lược Vắng mặt Lâu dài | 1039.26% | 793.53% | 30 |
-| 7 | Chiến lược Tần suất Cặp | 479.61% | 793.16% | 30 |
-| 8 | Chiến lược Không Lặp lại | -79.57% | 0.55% | 30 |
+| 1 | Chiến lược Ngẫu nhiên | 2640.99% | 2122.59% | 34 |
+| 2 | Chiến lược Suy giảm Exponential | 1651.65% | 1383.85% | 34 |
+| 3 | Chiến lược Mẫu | 1602.17% | 1353.52% | 34 |
+| 4 | Chiến lược Số Lạnh | 1552.47% | 1383.20% | 34 |
+| 5 | Chiến lược Số Nóng | 1006.94% | 804.32% | 34 |
+| 6 | Chiến lược Vắng mặt Lâu dài | 1006.30% | 804.37% | 34 |
+| 7 | Chiến lược Tần suất Cặp | 463.10% | 787.15% | 34 |
+| 8 | Chiến lược Không Lặp lại | -79.55% | 0.56% | 34 |
 
 
 ---
