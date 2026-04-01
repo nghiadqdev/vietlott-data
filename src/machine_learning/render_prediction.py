@@ -63,6 +63,151 @@ class PredictionSummaryGenerator:
             text = text[:-2]
         return f"{text}tr"
 
+    def _resolve_oos_window(
+        self,
+        strategies: List[_StrategyEntry],
+        df_pd,
+        *,
+        oos_days: int,
+        oos_draws: Optional[int],
+    ):
+        """Resolve OOS cutoff using explicit config or adaptive day-window selection."""
+        import pandas as pd
+
+        last_date = pd.to_datetime(df_pd["date"]).max()
+        date_series = pd.to_datetime(df_pd["date"])
+
+        if oos_draws is not None and oos_draws > 0:
+            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
+            if unique_dates_desc:
+                cutoff = unique_dates_desc[min(oos_draws - 1, len(unique_dates_desc) - 1)]
+                return cutoff, f"{oos_draws} kỳ quay gần nhất", f"**{oos_draws} kỳ quay gần nhất**"
+            return last_date, "không xác định", "**không xác định**"
+
+        # Respect explicit custom day window from CLI.
+        if oos_days > 0 and oos_days != 365:
+            cutoff = last_date - pd.Timedelta(days=oos_days)
+            return cutoff, f"{oos_days} ngày gần nhất", f"**{oos_days} ngày gần nhất**"
+
+        # Auto-select a dynamic day window when using default setting.
+        min_date = date_series.min()
+        max_span_days = max(1, int((last_date - min_date).days))
+        candidate_days = [d for d in [60, 90, 120, 180, 270, 365, 540] if d <= max_span_days]
+        if not candidate_days:
+            candidate_days = [max_span_days]
+
+        best_days = candidate_days[0]
+        best_score = float("-inf")
+        for days in candidate_days:
+            cutoff = last_date - pd.Timedelta(days=days)
+            rois = []
+            for _, _, model in strategies:
+                df_eval = model.df_backtest_evaluate
+                if df_eval is None or df_eval.empty:
+                    continue
+                eval_dates = pd.to_datetime(df_eval["date"])
+                oos_eval = df_eval.loc[eval_dates >= cutoff].copy()
+                if oos_eval.empty:
+                    continue
+
+                correct_num = oos_eval["correct_num"].apply(self._to_int).astype(int)
+                cost = len(oos_eval) * model.ticket_price
+                gain = correct_num.map(model.prices).fillna(0).astype(int).sum()
+                profit = gain - cost
+                rois.append((profit / cost * 100) if cost > 0 else 0.0)
+
+            if not rois:
+                continue
+
+            # Favor higher ROI with a small penalty for unstable cross-strategy spread.
+            score = mean(rois) - 0.10 * (pstdev(rois) if len(rois) > 1 else 0.0)
+            if score > best_score:
+                best_score = score
+                best_days = days
+
+        cutoff = last_date - pd.Timedelta(days=best_days)
+        plain = f"{best_days} ngày gần nhất (tự động chọn)"
+        md = f"**{best_days} ngày gần nhất (tự động chọn)**"
+        return cutoff, plain, md
+
+    def _sample_unique_tickets(self, model: PredictModel, next_draw_date, ticket_count: int) -> List[List[int]]:
+        """Sample ticket sets for a strategy, prioritizing uniqueness but always filling quota."""
+        unique = set()
+        tickets: List[List[int]] = []
+        max_attempts = max(20, ticket_count * 10)
+
+        for _ in range(max_attempts):
+            nums = sorted(int(n) for n in model.predict(next_draw_date))
+            key = tuple(nums)
+            if key in unique:
+                continue
+            unique.add(key)
+            tickets.append(nums)
+            if len(tickets) >= ticket_count:
+                break
+
+        # Some strategies can be effectively deterministic for the next draw.
+        # Fill remaining slots with repeated draws so the report always shows a fixed count.
+        while len(tickets) < ticket_count:
+            nums = sorted(int(n) for n in model.predict(next_draw_date))
+            tickets.append(nums)
+
+        return tickets
+
+    def _allocate_dynamic_ticket_counts(
+        self,
+        strategy_oos_rows: List[Tuple[str, float]],
+        *,
+        total_ticket_sets: int,
+        min_ticket_per_strategy: int,
+    ) -> Dict[str, int]:
+        """Allocate dynamic ticket counts across strategies using OOS ROI-based weights."""
+        if not strategy_oos_rows:
+            return {}
+
+        n = len(strategy_oos_rows)
+        min_tickets = max(1, min_ticket_per_strategy)
+        total = max(n * min_tickets, total_ticket_sets)
+
+        baseline: Dict[str, int] = {name: min_tickets for name, _ in strategy_oos_rows}
+        remaining = total - n * min_tickets
+        if remaining <= 0:
+            return baseline
+
+        # Convert OOS ROI to positive weights and reward better strategies with more ticket sets.
+        weighted_rows: List[Tuple[str, float]] = []
+        for name, roi_oos in strategy_oos_rows:
+            weight = max(0.0, roi_oos) + 1.0
+            weighted_rows.append((name, weight))
+
+        total_weight = sum(weight for _, weight in weighted_rows)
+        if total_weight <= 0:
+            # Uniform fallback.
+            uniform_share = remaining // n
+            extra = remaining % n
+            for name, _ in strategy_oos_rows:
+                baseline[name] += uniform_share
+            for idx, (name, _) in enumerate(strategy_oos_rows):
+                if idx < extra:
+                    baseline[name] += 1
+            return baseline
+
+        fractions: List[Tuple[str, float]] = []
+        allocated = 0
+        for name, weight in weighted_rows:
+            raw = remaining * (weight / total_weight)
+            whole = int(raw)
+            baseline[name] += whole
+            allocated += whole
+            fractions.append((name, raw - whole))
+
+        leftovers = remaining - allocated
+        fractions.sort(key=lambda x: x[1], reverse=True)
+        for idx in range(leftovers):
+            baseline[fractions[idx % len(fractions)][0]] += 1
+
+        return baseline
+
     def _collect_strategy_metrics(self, strategies: List[_StrategyEntry]) -> List[Dict[str, float]]:
         """Collect per-strategy metrics used for stability analysis and history logging."""
         metrics: List[Dict[str, float]] = []
@@ -436,20 +581,12 @@ class PredictionSummaryGenerator:
             )
 
         # Table B: dynamic recent-window OOS ROI with delta vs full-history benchmark.
-        last_date = pd.to_datetime(df_pd["date"]).max()
-        date_series = pd.to_datetime(df_pd["date"])
-        if oos_draws is not None and oos_draws > 0:
-            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
-            if unique_dates_desc:
-                cutoff = unique_dates_desc[min(oos_draws - 1, len(unique_dates_desc) - 1)]
-                oos_mode_text = f"**{oos_draws} kỳ quay gần nhất**"
-            else:
-                cutoff = last_date
-                oos_mode_text = "**không xác định**"
-        else:
-            days = oos_days if oos_days >= 1 else 365
-            cutoff = last_date - pd.Timedelta(days=days)
-            oos_mode_text = f"**{days} ngày gần nhất**"
+        cutoff, _oos_mode_plain, oos_mode_text = self._resolve_oos_window(
+            strategies,
+            df_pd,
+            oos_days=oos_days,
+            oos_draws=oos_draws,
+        )
 
         oos_rows = []
         for name, _, model in strategies:
@@ -597,6 +734,9 @@ class PredictionSummaryGenerator:
         product: str,
         top_k: int = 5,
         samples_per_strategy: int = 200,
+        tickets_per_strategy: Optional[int] = None,
+        total_ticket_sets: Optional[int] = None,
+        min_ticket_per_strategy: int = 1,
         oos_days: int = 365,
         oos_draws: Optional[int] = None,
     ) -> str:
@@ -615,26 +755,18 @@ class PredictionSummaryGenerator:
         display_next_draw_date = next_draw_date.date() if hasattr(next_draw_date, "date") else next_draw_date
 
         # Derive OOS window for dynamic-memory weighting.
-        date_series = pd.to_datetime(df_pd["date"])
-        if oos_draws is not None and oos_draws > 0:
-            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
-            if unique_dates_desc:
-                cutoff = unique_dates_desc[min(oos_draws - 1, len(unique_dates_desc) - 1)]
-                oos_mode_text = f"{oos_draws} kỳ quay gần nhất"
-            else:
-                cutoff = pd.to_datetime(last_date)
-                oos_mode_text = "không xác định"
-        else:
-            days = oos_days if oos_days >= 1 else 365
-            cutoff = pd.to_datetime(last_date) - pd.Timedelta(days=days)
-            oos_mode_text = f"{days} ngày gần nhất"
+        cutoff, oos_mode_text, _oos_mode_md = self._resolve_oos_window(
+            strategies,
+            df_pd,
+            oos_days=oos_days,
+            oos_draws=oos_draws,
+        )
 
         overall_counter_full: Counter[int] = Counter()
         overall_score_dynamic: Dict[int, float] = {}
         per_strategy_lines_full: List[str] = []
         per_strategy_lines_dynamic: List[str] = []
-        strategy_roi_list = []
-        strategy_oos_list = []
+        strategy_rows = []
 
         for name, _, model in strategies:
             strategy_counter: Counter[int] = Counter()
@@ -649,7 +781,6 @@ class PredictionSummaryGenerator:
             # Full-history ROI.
             cost, gain, profit = model.revenue()
             roi = (profit / cost * 100) if cost > 0 else 0.0
-            strategy_roi_list.append((name, top_numbers, roi))
 
             # OOS ROI for dynamic-memory weighting.
             oos_roi = 0.0
@@ -663,22 +794,52 @@ class PredictionSummaryGenerator:
                     oos_gain = correct_num.map(model.prices).fillna(0).astype(int).sum()
                     oos_profit = oos_gain - oos_cost
                     oos_roi = (oos_profit / oos_cost * 100) if oos_cost > 0 else 0.0
-            strategy_oos_list.append((name, top_numbers, oos_roi))
+            strategy_rows.append({
+                "name": name,
+                "model": model,
+                "top_numbers": top_numbers,
+                "roi": roi,
+                "oos_roi": oos_roi,
+                "strategy_counter": strategy_counter,
+            })
 
             # Convert OOS ROI into non-negative weight for dynamic ensemble.
             weight = max(0.0, oos_roi) + 1.0
             for num, cnt in strategy_counter.items():
                 overall_score_dynamic[num] = overall_score_dynamic.get(num, 0.0) + cnt * weight
-        
-        # Sort by ROI in descending order (highest profit first)
-        strategy_roi_list.sort(key=lambda x: x[2], reverse=True)
-        for name, top_numbers, _ in strategy_roi_list:
-            per_strategy_lines_full.append(f"| {name} | {top_numbers} |")
 
-        # Sort by OOS ROI in descending order for dynamic-memory ranking.
-        strategy_oos_list.sort(key=lambda x: x[2], reverse=True)
-        for name, top_numbers, _ in strategy_oos_list:
-            per_strategy_lines_dynamic.append(f"| {name} | {top_numbers} |")
+        if tickets_per_strategy is not None and tickets_per_strategy > 0:
+            ticket_count_by_strategy = {row["name"]: tickets_per_strategy for row in strategy_rows}
+            allocation_mode_text = f"cố định {tickets_per_strategy} bộ/chiến lược"
+        else:
+            total_sets = total_ticket_sets if total_ticket_sets is not None and total_ticket_sets > 0 else len(strategies) * 5
+            ticket_count_by_strategy = self._allocate_dynamic_ticket_counts(
+                [(row["name"], float(row["oos_roi"])) for row in strategy_rows],
+                total_ticket_sets=total_sets,
+                min_ticket_per_strategy=min_ticket_per_strategy,
+            )
+            allocation_mode_text = f"động theo ROI OOS (tổng {sum(ticket_count_by_strategy.values())} bộ)"
+
+        # Build per-strategy row text after ticket allocation is known.
+        full_sorted_rows = sorted(strategy_rows, key=lambda x: x["roi"], reverse=True)
+        for row in full_sorted_rows:
+            name = str(row["name"])
+            x_count = ticket_count_by_strategy.get(name, 1)
+            sampled_tickets = self._sample_unique_tickets(row["model"], next_draw_date, ticket_count=x_count)
+            ticket_text = "<br>".join(
+                f"{idx}. [{', '.join(str(n) for n in ticket)}]" for idx, ticket in enumerate(sampled_tickets, start=1)
+            )
+            per_strategy_lines_full.append(f"| {name} | {row['top_numbers']} | {x_count} | {ticket_text} |")
+
+        oos_sorted_rows = sorted(strategy_rows, key=lambda x: x["oos_roi"], reverse=True)
+        for row in oos_sorted_rows:
+            name = str(row["name"])
+            x_count = ticket_count_by_strategy.get(name, 1)
+            sampled_tickets = self._sample_unique_tickets(row["model"], next_draw_date, ticket_count=x_count)
+            ticket_text = "<br>".join(
+                f"{idx}. [{', '.join(str(n) for n in ticket)}]" for idx, ticket in enumerate(sampled_tickets, start=1)
+            )
+            per_strategy_lines_dynamic.append(f"| {name} | {row['top_numbers']} | {x_count} | {ticket_text} |")
 
         top_overall_full = overall_counter_full.most_common(top_k)
         top_overall_dynamic = sorted(overall_score_dynamic.items(), key=lambda x: x[1], reverse=True)[:top_k]
@@ -712,6 +873,7 @@ class PredictionSummaryGenerator:
 ### Bảng B - {top_k} số ứng cử viên theo Khung nhớ động
 
 > Trọng số chiến lược được tính theo ROI OOS trong **{oos_mode_text}**.
+> Phân bổ số bộ/chiến lược: **{allocation_mode_text}**.
 
 | Số | Điểm Động (weighted) | Tỷ trọng Điểm Động |
 |--------|-----------------------|--------------------|
@@ -719,16 +881,16 @@ class PredictionSummaryGenerator:
 
 ### {top_k} hàng đầu theo Chiến lược - Bảng A (xếp theo ROI Toàn kỳ)
 
-| Chiến lược | Số hàng đầu |
-|----------|-------------|
+| Chiến lược | Số hàng đầu | x bộ số | Danh sách bộ số gợi ý |
+|----------|-------------|--------|------------------------|
 {chr(10).join(per_strategy_lines_full)}
 
 ### {top_k} hàng đầu theo Chiến lược - Bảng B (xếp theo ROI Khung nhớ động)
 
 > Xếp hạng theo ROI OOS trong **{oos_mode_text}**.
 
-| Chiến lược | Số hàng đầu |
-|----------|-------------|
+| Chiến lược | Số hàng đầu | x bộ số | Danh sách bộ số gợi ý |
+|----------|-------------|--------|------------------------|
 {chr(10).join(per_strategy_lines_dynamic)}
 """
 
@@ -816,22 +978,12 @@ class PredictionSummaryGenerator:
         import pandas as pd
 
         last_date = pd.to_datetime(df_pd["date"]).max()
-        date_series = pd.to_datetime(df_pd["date"])
-
-        if oos_draws is not None and oos_draws > 0:
-            unique_dates_desc = sorted(date_series.dropna().unique(), reverse=True)
-            if not unique_dates_desc:
-                return ""
-            if oos_draws > len(unique_dates_desc):
-                cutoff = min(unique_dates_desc)
-            else:
-                cutoff = unique_dates_desc[oos_draws - 1]
-            oos_mode_text = f"**{oos_draws} kỳ quay gần nhất**"
-        else:
-            if oos_days < 1:
-                return ""
-            cutoff = last_date - pd.Timedelta(days=oos_days)
-            oos_mode_text = f"**{oos_days} ngày gần nhất**"
+        cutoff, _oos_mode_plain, oos_mode_text = self._resolve_oos_window(
+            strategies,
+            df_pd,
+            oos_days=oos_days,
+            oos_draws=oos_draws,
+        )
 
         rows = []
         for name, _, model in strategies:
@@ -990,6 +1142,9 @@ class PredictionSummaryGenerator:
         history_window: int = 30,
         oos_days: int = 365,
         oos_draws: Optional[int] = None,
+        tickets_per_strategy: Optional[int] = None,
+        total_ticket_sets: Optional[int] = None,
+        min_ticket_per_strategy: int = 1,
     ) -> Tuple[str, List[List[Dict[str, float]]]]:
         """Generate the complete prediction summary content."""
         logger.info("Starting prediction summary generation...")
@@ -1037,6 +1192,9 @@ class PredictionSummaryGenerator:
             df_pd,
             product=product,
             top_k=number_predict,
+            tickets_per_strategy=tickets_per_strategy,
+            total_ticket_sets=total_ticket_sets,
+            min_ticket_per_strategy=min_ticket_per_strategy,
             oos_days=oos_days,
             oos_draws=oos_draws,
         )
@@ -1096,6 +1254,9 @@ Tóm tắt dự đoán này chỉ dành cho mục đích giáo dục và nghiên
         history_window: int = 30,
         oos_days: int = 365,
         oos_draws: Optional[int] = None,
+        tickets_per_strategy: Optional[int] = None,
+        total_ticket_sets: Optional[int] = None,
+        min_ticket_per_strategy: int = 1,
     ) -> None:
         """Generate and save prediction summary to file."""
         if output_path is None:
@@ -1110,6 +1271,9 @@ Tóm tắt dự đoán này chỉ dành cho mục đích giáo dục và nghiên
                 history_window=history_window,
                 oos_days=oos_days,
                 oos_draws=oos_draws,
+                tickets_per_strategy=tickets_per_strategy,
+                total_ticket_sets=total_ticket_sets,
+                min_ticket_per_strategy=min_ticket_per_strategy,
             )
 
             with output_path.open("w", encoding="utf-8") as ofile:
@@ -1139,6 +1303,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--history-window", type=int, default=30, help="Number of recent history records for leaderboard")
     parser.add_argument("--oos-days", type=int, default=365, help="Out-of-sample window size in days")
     parser.add_argument("--oos-draws", type=int, default=None, help="Out-of-sample window by recent draw count")
+    parser.add_argument(
+        "--tickets-per-strategy",
+        type=int,
+        default=None,
+        help="Fixed number of ticket sets per strategy (set to use fixed mode)",
+    )
+    parser.add_argument(
+        "--total-ticket-sets",
+        type=int,
+        default=None,
+        help="Total ticket sets to allocate dynamically across all strategies",
+    )
+    parser.add_argument(
+        "--min-ticket-per-strategy",
+        type=int,
+        default=1,
+        help="Minimum ticket sets for each strategy in dynamic allocation mode",
+    )
     return parser.parse_args()
 
 
@@ -1156,6 +1338,9 @@ def main():
             history_window=args.history_window,
             oos_days=args.oos_days,
             oos_draws=args.oos_draws,
+            tickets_per_strategy=args.tickets_per_strategy,
+            total_ticket_sets=args.total_ticket_sets,
+            min_ticket_per_strategy=args.min_ticket_per_strategy,
         )
         logger.info("Prediction summary generation completed successfully!")
     except Exception as e:

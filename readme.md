@@ -307,16 +307,54 @@ vietlott-missing [OPTIONS] PRODUCT
 
 > **Available Products**: power_655, power_645, power_535, keno, 3d, 3d_pro, bingo18
 
-### 🛠️ Development Setup
-
-```bash
-# Clone the repository
 git clone https://github.com/vietvudanh/vietlott-data.git ; cd vietlott-data
 
-# Install dependencies (recommend using uv and virtual environment)
-uv sync --dev
+## 🏃‍♂️ How to Run This Project
 
-# Run tests
+### 1. Clone and Set Up Environment
+
+```bash
+git clone https://github.com/vietvudanh/vietlott-data.git
+cd vietlott-data
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e .
+```
+
+### 2. Run the Crawler (Fetch Data)
+
+```bash
+# Example: Crawl Power 6/45 data
+source .venv/bin/activate
+vietlott-crawl power_645
+```
+
+### 3. Run Prediction (Generate ML Report)
+
+```bash
+# Example: Generate prediction summary for Power 6/45
+source .venv/bin/activate
+python src/machine_learning/render_prediction.py --product power_645
+# Output: src/machine_learning/readme_power_645.md
+```
+
+### 4. Run All Tests
+
+```bash
+source .venv/bin/activate
+pytest
+# or, if you have uv:
+uv run pytest
+```
+
+---
+
+### 🛠️ Development Setup (Alternative)
+If you use `uv` (recommended for speed):
+
+```bash
+uv sync --dev
 uv run pytest
 ```
 
