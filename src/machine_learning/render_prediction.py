@@ -649,6 +649,30 @@ class PredictionSummaryGenerator:
             except Exception:
                 return 0
 
+    def _latest_best_hit_text(self, model: PredictModel) -> str:
+        """Return highest matched count and latest draw date where that best hit occurred."""
+        df_eval = model.df_backtest_evaluate
+        if df_eval is None or df_eval.empty:
+            return "không có dữ liệu"
+
+        import pandas as pd
+
+        s_correct = df_eval["correct_num"].apply(self._to_int).astype(int)
+        if s_correct.empty:
+            return "không có dữ liệu"
+
+        best_match = int(s_correct.max())
+        best_mask = (s_correct == best_match).to_numpy()
+        df_best = df_eval.loc[best_mask, ["date"]].copy()
+        if df_best.empty:
+            return f"{best_match} số"
+
+        latest_date = pd.to_datetime(df_best["date"]).max()
+        latest_text = latest_date.date().isoformat() if hasattr(latest_date, "date") else str(latest_date)
+        prize = int(model.prices.get(best_match, 0))
+        prize_text = self._fmt_money_tr(prize) if prize > 0 else "0tr"
+        return f"{best_match} số ({latest_text}, giải {prize_text})"
+
     def _generate_strategy_report(self, model: PredictModel, strategy_name: str, tickets_per_day: int) -> str:
         """Generate detailed report for a single strategy."""
         df_eval = model.df_backtest_evaluate
@@ -800,6 +824,7 @@ class PredictionSummaryGenerator:
                 "top_numbers": top_numbers,
                 "roi": roi,
                 "oos_roi": oos_roi,
+                "best_hit": self._latest_best_hit_text(model),
                 "strategy_counter": strategy_counter,
             })
 
@@ -829,7 +854,9 @@ class PredictionSummaryGenerator:
             ticket_text = "<br>".join(
                 f"{idx}. [{', '.join(str(n) for n in ticket)}]" for idx, ticket in enumerate(sampled_tickets, start=1)
             )
-            per_strategy_lines_full.append(f"| {name} | {row['top_numbers']} | {x_count} | {ticket_text} |")
+            per_strategy_lines_full.append(
+                f"| {name} | {row['best_hit']} | {row['top_numbers']} | {x_count} | {ticket_text} |"
+            )
 
         oos_sorted_rows = sorted(strategy_rows, key=lambda x: x["oos_roi"], reverse=True)
         for row in oos_sorted_rows:
@@ -839,7 +866,9 @@ class PredictionSummaryGenerator:
             ticket_text = "<br>".join(
                 f"{idx}. [{', '.join(str(n) for n in ticket)}]" for idx, ticket in enumerate(sampled_tickets, start=1)
             )
-            per_strategy_lines_dynamic.append(f"| {name} | {row['top_numbers']} | {x_count} | {ticket_text} |")
+            per_strategy_lines_dynamic.append(
+                f"| {name} | {row['best_hit']} | {row['top_numbers']} | {x_count} | {ticket_text} |"
+            )
 
         top_overall_full = overall_counter_full.most_common(top_k)
         top_overall_dynamic = sorted(overall_score_dynamic.items(), key=lambda x: x[1], reverse=True)[:top_k]
@@ -881,16 +910,16 @@ class PredictionSummaryGenerator:
 
 ### {top_k} hàng đầu theo Chiến lược - Bảng A (xếp theo ROI Toàn kỳ)
 
-| Chiến lược | Số hàng đầu | x bộ số | Danh sách bộ số gợi ý |
-|----------|-------------|--------|------------------------|
+| Chiến lược | Giải cao nhất (kỳ gần nhất) | Số hàng đầu | x bộ số | Danh sách bộ số gợi ý |
+|----------|-----------------------------|-------------|--------|------------------------|
 {chr(10).join(per_strategy_lines_full)}
 
 ### {top_k} hàng đầu theo Chiến lược - Bảng B (xếp theo ROI Khung nhớ động)
 
 > Xếp hạng theo ROI OOS trong **{oos_mode_text}**.
 
-| Chiến lược | Số hàng đầu | x bộ số | Danh sách bộ số gợi ý |
-|----------|-------------|--------|------------------------|
+| Chiến lược | Giải cao nhất (kỳ gần nhất) | Số hàng đầu | x bộ số | Danh sách bộ số gợi ý |
+|----------|-----------------------------|-------------|--------|------------------------|
 {chr(10).join(per_strategy_lines_dynamic)}
 """
 
@@ -902,7 +931,7 @@ class PredictionSummaryGenerator:
         top_k: int = 5,
         samples_per_strategy: int = 200,
     ) -> str:
-        """Generate a concise one-row-per-strategy summary table with next-draw Top-K numbers."""
+        """Generate a concise one-row-per-strategy summary table with essential metrics."""
         if not strategies or df_pd.empty or "date" not in df_pd.columns:
             return "## 📋 Compact Strategy Table\n\n> Not enough data to generate compact table.\n"
 
@@ -934,15 +963,13 @@ class PredictionSummaryGenerator:
                 strategy_counter.update(model.predict(next_draw_date))
             top_numbers = ", ".join(str(n) for n, _ in strategy_counter.most_common(top_k))
 
-            config_text = f"dải {model.min_val}-{model.max_val}, chọn {model.number_predict}, vé/ngày {tpd}"
-            period_text = f"{df_eval['date'].min()} → {df_eval['date'].max()} ({len(model.df_backtest):,} lần quay/{len(df_eval):,} dự đoán)"
             financial_text = f"chi {self._fmt_money_tr(cost)}, lợi {self._fmt_money_tr(gain)}, roi {roi:.2f}%"
             match_text = f"5+: {c5}, 4: {c4}, 3: {c3}"
-            best_text = f"{c5} hàng với >=5 số trùng"
+            best_hit_text = self._latest_best_hit_text(model)
 
             row_text = (
                 "| "
-                + " | ".join([name, config_text, period_text, financial_text, match_text, best_text, top_numbers])
+                + " | ".join([name, f"{roi:.2f}%", financial_text, best_hit_text, match_text, top_numbers])
                 + " |"
             )
             rows.append((roi, row_text))
@@ -957,10 +984,10 @@ class PredictionSummaryGenerator:
         return f"""## 📋 Bảng Chiến lược Tóm tắt
 
 > Ngày dự đoán: **{display_next_draw_date}**.
-> Dạng tóm tắt: Cấu hình, Kỳ Kiểm thử, Tóm tắt Tài chính, Phân bố Trùng khớp, KQ nổi bật (>=5 số trùng), {top_k} Hàng đầu.
+    > Bảng rút gọn: chỉ giữ các chỉ số quan trọng để dễ so sánh nhanh.
 
-| Chiến lược | Cấu hình | Kỳ Kiểm thử | Tóm tắt Tài chính | Phân bố Trùng khớp | KQ nổi bật (>=5) | {top_k} Hàng đầu |
-|----------|---------------|-----------------|-------------------|--------------------|--------------|--------|
+    | Chiến lược | ROI | Tóm tắt Tài chính | Giải cao nhất (kỳ gần nhất) | Phân bố Trùng khớp | {top_k} Hàng đầu |
+    |----------|-----|-------------------|-----------------------------|--------------------|--------|
 {chr(10).join(rows_sorted)}
 """
 
