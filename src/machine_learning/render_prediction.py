@@ -923,6 +923,78 @@ class PredictionSummaryGenerator:
 {chr(10).join(per_strategy_lines_dynamic)}
 """
 
+    def _fmt_number_set_with_overlap(self, numbers, overlap_set: set[int]) -> str:
+        """Format number list and paint overlap numbers in red for markdown HTML rendering."""
+        if numbers is None:
+            return "-"
+
+        out: List[str] = []
+        for n in sorted(int(x) for x in numbers):
+            if n in overlap_set:
+                out.append(f"<span style='color:#d00000;font-weight:700'>{n}</span>")
+            else:
+                out.append(str(n))
+        return ", ".join(out)
+
+    def _generate_previous_draw_overlap_section(self, strategies: List[_StrategyEntry]) -> str:
+        """Show how each strategy overlapped with the latest evaluated previous draw."""
+        import pandas as pd
+
+        rows = []
+        reference_draw_date = None
+
+        for name, _, model in strategies:
+            df_eval = model.df_backtest_evaluate
+            if df_eval is None or df_eval.empty:
+                continue
+
+            eval_dates = pd.to_datetime(df_eval["date"])
+            latest_idx = eval_dates.idxmax()
+            last_row = df_eval.loc[latest_idx]
+            pred_raw = last_row.get("predicted")
+            result_raw = last_row.get("result")
+            draw_date = last_row.get("date")
+
+            predicted = [int(x) for x in pred_raw] if pred_raw is not None else []
+            result = [int(x) for x in result_raw] if result_raw is not None else []
+            overlap = set(predicted).intersection(result)
+
+            rows.append(
+                {
+                    "name": name,
+                    "draw_date": draw_date,
+                    "predicted": predicted,
+                    "result": result,
+                    "overlap_count": len(overlap),
+                    "overlap": overlap,
+                }
+            )
+            if reference_draw_date is None:
+                reference_draw_date = draw_date
+
+        if not rows:
+            return ""
+
+        rows.sort(key=lambda x: x["overlap_count"], reverse=True)
+        lines = [
+            "| Chiến lược | Kỳ trước | Bộ số chiến lược (số trùng màu đỏ) | Kết quả trúng kỳ trước (số trùng màu đỏ) | Số trùng |",
+            "|------------|----------|-------------------------------------|-------------------------------------------|----------|",
+        ]
+        for item in rows:
+            pred_text = self._fmt_number_set_with_overlap(item["predicted"], item["overlap"])
+            result_text = self._fmt_number_set_with_overlap(item["result"], item["overlap"])
+            lines.append(
+                f"| {item['name']} | {item['draw_date']} | {pred_text} | {result_text} | {item['overlap_count']} |"
+            )
+
+        return f"""## 🎯 So sánh Trùng khớp Với Kỳ trước
+
+> Bảng này chỉ hiển thị lại kết quả đã chạy trước đó (kỳ gần nhất trong tập evaluate của từng chiến lược).
+> Các số trùng giữa bộ số chiến lược và kết quả trúng kỳ trước được tô **đỏ** để dễ nhìn.
+
+{chr(10).join(lines)}
+"""
+
     def _generate_compact_strategy_table(
         self,
         strategies: List[_StrategyEntry],
@@ -984,10 +1056,10 @@ class PredictionSummaryGenerator:
         return f"""## 📋 Bảng Chiến lược Tóm tắt
 
 > Ngày dự đoán: **{display_next_draw_date}**.
-    > Bảng rút gọn: chỉ giữ các chỉ số quan trọng để dễ so sánh nhanh.
+> Bảng rút gọn: chỉ giữ các chỉ số quan trọng để dễ so sánh nhanh.
 
-    | Chiến lược | ROI | Tóm tắt Tài chính | Giải cao nhất (kỳ gần nhất) | Phân bố Trùng khớp | {top_k} Hàng đầu |
-    |----------|-----|-------------------|-----------------------------|--------------------|--------|
+| Chiến lược | ROI | Tóm tắt Tài chính | Giải cao nhất (kỳ gần nhất) | Phân bố Trùng khớp | {top_k} Hàng đầu |
+|----------|-----|-------------------|-----------------------------|--------------------|--------|
 {chr(10).join(rows_sorted)}
 """
 
@@ -1214,6 +1286,7 @@ class PredictionSummaryGenerator:
         )
         roi_chart = self._generate_roi_bar_chart(strategies)
         compact_table = self._generate_compact_strategy_table(strategies, df_pd, product=product, top_k=number_predict)
+        previous_draw_overlap = self._generate_previous_draw_overlap_section(strategies)
         future_forecast = self._generate_future_number_forecast(
             strategies,
             df_pd,
@@ -1254,6 +1327,8 @@ class PredictionSummaryGenerator:
 {roi_chart}
 
 {compact_table}
+
+{previous_draw_overlap}
 
 {future_forecast}
 
