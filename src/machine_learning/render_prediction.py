@@ -622,9 +622,10 @@ class PredictionSummaryGenerator:
 
         return f"""## 📊 So sánh ROI: Benchmark vs Khung nhớ động
 
-> Bảng A là benchmark cố định trên toàn bộ lịch sử.
-> Bảng B là ROI ở cửa sổ gần đây {oos_mode_text} để mô phỏng vận hành động.
-> Cột **ΔROI** giúp bạn thấy mức thay đổi khi chuyển từ khung nhớ cố định sang khung nhớ gần.
+    > Bảng A là benchmark cố định trên toàn bộ lịch sử.
+    > Bảng B là ROI ở cửa sổ gần đây {oos_mode_text} để mô phỏng vận hành động.
+    > Cột **ΔROI** giúp bạn thấy mức thay đổi khi chuyển từ khung nhớ cố định sang khung nhớ gần.
+    > Lưu ý: ROI cao ở đây vẫn chỉ là thước đo backtest/OOS, không có nghĩa là vài kỳ quay gần nhất sẽ trùng nhiều số hơn.
 
 ### Bảng A: ROI Benchmark (Toàn kỳ)
 
@@ -1055,8 +1056,9 @@ class PredictionSummaryGenerator:
 
         return f"""## 📋 Bảng Chiến lược Tóm tắt
 
-> Ngày dự đoán: **{display_next_draw_date}**.
-> Bảng rút gọn: chỉ giữ các chỉ số quan trọng để dễ so sánh nhanh.
+    > Ngày dự đoán: **{display_next_draw_date}**.
+    > Bảng rút gọn: chỉ giữ các chỉ số quan trọng để dễ so sánh nhanh.
+    > ROI ở đây phản ánh hiệu quả trên dữ liệu lịch sử và OOS, không phải xác suất trúng cao ở các kỳ quay sắp tới.
 
 | Chiến lược | ROI | Tóm tắt Tài chính | Giải cao nhất (kỳ gần nhất) | Phân bố Trùng khớp | {top_k} Hàng đầu |
 |----------|-----|-------------------|-----------------------------|--------------------|--------|
@@ -1318,7 +1320,8 @@ class PredictionSummaryGenerator:
 {seed_note}>
 >
 > Tài liệu này chứa các dự đoán học máy cho dữ liệu xổ số Việt Nam.
-> Đây là một mô-đun thử nghiệm chỉ dành cho mục đích giáo dục.
+    > Đây là một mô-đun thử nghiệm chỉ dành cho mục đích giáo dục.
+    > ROI cao trong báo cáo chủ yếu là kết quả backtest/OOS; thực tế các kỳ quay gần vẫn có thể chỉ trùng 0-2 số.
 
 {roi_table}
 
